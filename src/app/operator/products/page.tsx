@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit2, Trash2, Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,18 +12,43 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { getProducts, getCategories, createProduct, updateProduct, deleteProduct } from "@/lib/services/products";
-import { formatINR, getStockStatus } from "@/lib/utils";
-import type { Product, Category } from "@/lib/types";
+import { formatINR, getStockStatus, getExpiryStatus } from "@/lib/utils";
+import type { Product, Category, ExpiryStatus } from "@/lib/types";
 
 type ProductFormData = {
   name: string; sku: string; barcode: string; category_id: string;
   purchase_price: string; selling_price: string; quantity: string; min_stock: string;
+  manufacture_date: string; expiration_date: string; expiry_notification_days: string;
 };
 
 const emptyForm: ProductFormData = {
   name: "", sku: "", barcode: "", category_id: "",
   purchase_price: "", selling_price: "", quantity: "", min_stock: "10",
+  manufacture_date: "", expiration_date: "", expiry_notification_days: "30",
 };
+
+function ExpiryBadge({ date, notifyDays }: { date?: string; notifyDays?: number }) {
+  if (!date) return <span className="text-slate-300">—</span>;
+  const status: ExpiryStatus | null = getExpiryStatus(date, notifyDays ?? 30);
+  const formatted = new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  if (status === "expired") {
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs text-rose-600 font-medium">{formatted}</span>
+        <span className="text-[10px] text-rose-400">Expired</span>
+      </div>
+    );
+  }
+  if (status === "expiring") {
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs text-amber-600 font-medium">{formatted}</span>
+        <span className="text-[10px] text-amber-400">Expiring soon</span>
+      </div>
+    );
+  }
+  return <span className="text-xs text-slate-500">{formatted}</span>;
+}
 
 export default function ProductsPage() {
   const { user } = useAuth();
@@ -46,11 +71,14 @@ export default function ProductsPage() {
       .finally(() => setLoading(false));
   }, [user]);
 
-  const filtered = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase()) ||
-      (p.category?.name ?? "").toLowerCase().includes(search.toLowerCase())
+  const filtered = useMemo(
+    () => products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.sku.toLowerCase().includes(search.toLowerCase()) ||
+        (p.category?.name ?? "").toLowerCase().includes(search.toLowerCase())
+    ),
+    [products, search]
   );
 
   function openAdd() {
@@ -68,6 +96,9 @@ export default function ProductsPage() {
       selling_price: String(product.selling_price),
       quantity: String(product.quantity),
       min_stock: String(product.min_stock),
+      manufacture_date: product.manufacture_date ?? "",
+      expiration_date: product.expiration_date ?? "",
+      expiry_notification_days: String(product.expiry_notification_days ?? 30),
     });
     setDialogOpen(true);
   }
@@ -88,6 +119,9 @@ export default function ProductsPage() {
         selling_price: Number(form.selling_price),
         quantity: Number(form.quantity),
         min_stock: Number(form.min_stock),
+        manufacture_date: form.manufacture_date || undefined,
+        expiration_date: form.expiration_date || undefined,
+        expiry_notification_days: form.expiration_date ? Number(form.expiry_notification_days) : undefined,
       };
       if (editProduct) {
         const updated = await updateProduct(editProduct.id, payload);
@@ -140,14 +174,14 @@ export default function ProductsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/50">
-                {["SKU", "Product", "Category", "Stock", "Status", "Buy Price", "Sell Price", "Stock Value", ""].map((h) => (
+                {["SKU", "Product", "Category", "Expiry", "Stock", "Status", "Buy Price", "Sell Price", "Stock Value", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading && (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-slate-400">Loading products…</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-sm text-slate-400">Loading products…</td></tr>
               )}
               <AnimatePresence>
                 {!loading && filtered.map((product, i) => (
@@ -155,6 +189,7 @@ export default function ProductsPage() {
                     <td className="px-4 py-3"><code className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{product.sku}</code></td>
                     <td className="px-4 py-3 font-medium text-slate-800 max-w-[180px] truncate">{product.name}</td>
                     <td className="px-4 py-3"><span className="text-xs text-slate-500">{product.category?.name ?? "—"}</span></td>
+                    <td className="px-4 py-3"><ExpiryBadge date={product.expiration_date} notifyDays={product.expiry_notification_days} /></td>
                     <td className="px-4 py-3 text-slate-700">{product.quantity}</td>
                     <td className="px-4 py-3"><StatusBadge status={getStockStatus(product.quantity, product.min_stock)} /></td>
                     <td className="px-4 py-3 text-slate-600">{formatINR(product.purchase_price)}</td>
@@ -170,7 +205,7 @@ export default function ProductsPage() {
                 ))}
               </AnimatePresence>
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-12 text-center"><Package className="w-8 h-8 text-slate-200 mx-auto mb-2" /><p className="text-sm text-slate-400">No products found</p></td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center"><Package className="w-8 h-8 text-slate-200 mx-auto mb-2" /><p className="text-sm text-slate-400">No products found</p></td></tr>
               )}
             </tbody>
           </table>
@@ -224,6 +259,20 @@ export default function ProductsPage() {
               <Label>Minimum Stock</Label>
               <Input type="number" value={form.min_stock} onChange={(e) => setForm((f) => ({ ...f, min_stock: e.target.value }))} placeholder="10" />
             </div>
+            <div className="space-y-1.5">
+              <Label>Manufacture Date</Label>
+              <Input type="date" value={form.manufacture_date} onChange={(e) => setForm((f) => ({ ...f, manufacture_date: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Expiration Date</Label>
+              <Input type="date" value={form.expiration_date} onChange={(e) => setForm((f) => ({ ...f, expiration_date: e.target.value }))} />
+            </div>
+            {form.expiration_date && (
+              <div className="col-span-2 space-y-1.5">
+                <Label>Notify Before Expiry (days)</Label>
+                <Input type="number" value={form.expiry_notification_days} onChange={(e) => setForm((f) => ({ ...f, expiry_notification_days: e.target.value }))} placeholder="30" min="1" />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

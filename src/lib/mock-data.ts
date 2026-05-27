@@ -10,8 +10,16 @@ export const DEMO_COMPANY: Company = {
   slug: "nexus-retail",
   address: "12, MG Road, Bengaluru, Karnataka - 560001",
   gst_number: "29ABCDE1234F1Z5",
+  contact_number: "+91 80-4567-8901",
+  contact_email: "admin@nexusretail.in",
   currency: "INR",
   timezone: "Asia/Kolkata",
+  joining_date: "2025-01-15",
+  subscription_start: "2025-01-15",
+  subscription_end: "2027-01-15",
+  subscription_status: "active",
+  company_status: "active",
+  plan: "pro",
   created_at: "2025-01-15T10:00:00Z",
 };
 
@@ -64,14 +72,14 @@ export const DEMO_CATEGORIES: Category[] = [
 export const DEMO_PRODUCTS: Product[] = [
   { id: "prod-001", company_id: "comp-001", category_id: "cat-001", category: DEMO_CATEGORIES[0], name: "Nike Air Max 90", sku: "SKU-001", barcode: "8901234567890", purchase_price: 4200, selling_price: 6999, quantity: 3, min_stock: 10, is_active: true, created_at: "2025-01-20T10:00:00Z", updated_at: "2026-05-24T10:00:00Z" },
   { id: "prod-002", company_id: "comp-001", category_id: "cat-002", category: DEMO_CATEGORIES[1], name: 'Samsung TV 43"', sku: "SKU-002", barcode: "8901234567891", purchase_price: 24000, selling_price: 38000, quantity: 12, min_stock: 5, is_active: true, created_at: "2025-01-20T10:00:00Z", updated_at: "2026-05-23T10:00:00Z" },
-  { id: "prod-003", company_id: "comp-001", category_id: "cat-003", category: DEMO_CATEGORIES[2], name: "Jeans Classic Fit", sku: "SKU-003", barcode: "8901234567892", purchase_price: 450, selling_price: 1299, quantity: 85, min_stock: 20, is_active: true, created_at: "2025-01-20T10:00:00Z", updated_at: "2026-05-20T10:00:00Z" },
+  { id: "prod-003", company_id: "comp-001", category_id: "cat-003", category: DEMO_CATEGORIES[2], name: "Jeans Classic Fit", sku: "SKU-003", barcode: "8901234567892", purchase_price: 450, selling_price: 1299, quantity: 85, min_stock: 20, is_active: true, manufacture_date: "2025-09-01", expiration_date: "2027-06-01", expiry_notification_days: 30, created_at: "2025-01-20T10:00:00Z", updated_at: "2026-05-20T10:00:00Z" },
   { id: "prod-004", company_id: "comp-001", category_id: "cat-004", category: DEMO_CATEGORIES[3], name: "USB-C Hub 7-in-1", sku: "SKU-004", barcode: "8901234567893", purchase_price: 1100, selling_price: 2499, quantity: 5, min_stock: 15, is_active: true, created_at: "2025-02-01T10:00:00Z", updated_at: "2026-05-22T10:00:00Z" },
   { id: "prod-005", company_id: "comp-001", category_id: "cat-004", category: DEMO_CATEGORIES[3], name: "Laptop Stand Pro", sku: "SKU-005", barcode: "8901234567894", purchase_price: 850, selling_price: 1999, quantity: 28, min_stock: 10, is_active: true, created_at: "2025-02-01T10:00:00Z", updated_at: "2026-05-21T10:00:00Z" },
-  { id: "prod-006", company_id: "comp-001", category_id: "cat-003", category: DEMO_CATEGORIES[2], name: "Running Shorts M", sku: "SKU-006", barcode: "8901234567895", purchase_price: 280, selling_price: 699, quantity: 7, min_stock: 20, is_active: true, created_at: "2025-02-10T10:00:00Z", updated_at: "2026-05-19T10:00:00Z" },
+  { id: "prod-006", company_id: "comp-001", category_id: "cat-003", category: DEMO_CATEGORIES[2], name: "Running Shorts M", sku: "SKU-006", barcode: "8901234567895", purchase_price: 280, selling_price: 699, quantity: 7, min_stock: 20, is_active: true, manufacture_date: "2025-11-01", expiration_date: "2026-06-10", expiry_notification_days: 30, created_at: "2025-02-10T10:00:00Z", updated_at: "2026-05-19T10:00:00Z" },
   { id: "prod-007", company_id: "comp-001", category_id: "cat-002", category: DEMO_CATEGORIES[1], name: "Bluetooth Speaker", sku: "SKU-007", barcode: "8901234567896", purchase_price: 1800, selling_price: 3499, quantity: 2, min_stock: 8, is_active: true, created_at: "2025-02-10T10:00:00Z", updated_at: "2026-05-25T10:00:00Z" },
   { id: "prod-008", company_id: "comp-001", category_id: "cat-002", category: DEMO_CATEGORIES[1], name: "Wireless Mouse", sku: "SKU-008", barcode: "8901234567897", purchase_price: 620, selling_price: 1299, quantity: 42, min_stock: 15, is_active: true, created_at: "2025-03-01T10:00:00Z", updated_at: "2026-05-18T10:00:00Z" },
   { id: "prod-009", company_id: "comp-001", category_id: "cat-001", category: DEMO_CATEGORIES[0], name: "Adidas Ultraboost", sku: "SKU-009", barcode: "8901234567898", purchase_price: 5800, selling_price: 9499, quantity: 15, min_stock: 8, is_active: true, created_at: "2025-03-10T10:00:00Z", updated_at: "2026-05-15T10:00:00Z" },
-  { id: "prod-010", company_id: "comp-001", category_id: "cat-003", category: DEMO_CATEGORIES[2], name: "Cotton T-Shirt (Pack 3)", sku: "SKU-010", barcode: "8901234567899", purchase_price: 350, selling_price: 899, quantity: 120, min_stock: 30, is_active: true, created_at: "2025-03-10T10:00:00Z", updated_at: "2026-05-10T10:00:00Z" },
+  { id: "prod-010", company_id: "comp-001", category_id: "cat-003", category: DEMO_CATEGORIES[2], name: "Cotton T-Shirt (Pack 3)", sku: "SKU-010", barcode: "8901234567899", purchase_price: 350, selling_price: 899, quantity: 120, min_stock: 30, is_active: true, manufacture_date: "2024-12-01", expiration_date: "2026-05-20", expiry_notification_days: 30, created_at: "2025-03-10T10:00:00Z", updated_at: "2026-05-10T10:00:00Z" },
   { id: "prod-011", company_id: "comp-001", category_id: "cat-002", category: DEMO_CATEGORIES[1], name: "Mechanical Keyboard", sku: "SKU-011", barcode: "8901234567900", purchase_price: 3200, selling_price: 5999, quantity: 18, min_stock: 5, is_active: true, created_at: "2025-04-01T10:00:00Z", updated_at: "2026-05-05T10:00:00Z" },
   { id: "prod-012", company_id: "comp-001", category_id: "cat-004", category: DEMO_CATEGORIES[3], name: "Phone Case Premium", sku: "SKU-012", barcode: "8901234567901", purchase_price: 120, selling_price: 399, quantity: 200, min_stock: 50, is_active: true, created_at: "2025-04-01T10:00:00Z", updated_at: "2026-05-01T10:00:00Z" },
 ];
@@ -124,6 +132,8 @@ export const DEMO_NOTIFICATIONS: Notification[] = [
   { id: "notif-004", company_id: "comp-001", type: "info", title: "Monthly report ready", message: "May 2026 sales report has been generated and is ready for download.", is_read: true, created_at: "2026-05-25T08:00:00Z" },
   { id: "notif-005", company_id: "comp-001", type: "warning", title: "Low stock — USB-C Hub 7-in-1", message: "Only 5 units remaining. Minimum stock level is 15.", is_read: true, created_at: "2026-05-24T11:00:00Z" },
   { id: "notif-006", company_id: "comp-001", type: "warning", title: "Low stock — Running Shorts M", message: "Only 7 units remaining. Minimum stock level is 20.", is_read: true, created_at: "2026-05-23T09:00:00Z" },
+  { id: "notif-007", company_id: "comp-001", type: "alert", title: "Product expiring soon — Running Shorts M", message: "Expiry date is 10 Jun 2026 (14 days away). Consider clearance before expiry.", is_read: false, created_at: "2026-05-27T08:00:00Z" },
+  { id: "notif-008", company_id: "comp-001", type: "alert", title: "Product expired — Cotton T-Shirt (Pack 3)", message: "Expiry date was 20 May 2026. Pull stock from shelves immediately.", is_read: false, created_at: "2026-05-27T08:00:00Z" },
 ];
 
 export const DEMO_MONTHLY_DATA: MonthlyData[] = [

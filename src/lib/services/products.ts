@@ -38,6 +38,9 @@ export interface CreateProductInput {
   selling_price: number;
   quantity: number;
   min_stock: number;
+  manufacture_date?: string;
+  expiration_date?: string;
+  expiry_notification_days?: number;
 }
 
 export async function createProduct(input: CreateProductInput): Promise<Product> {

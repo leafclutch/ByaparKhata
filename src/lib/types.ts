@@ -1,17 +1,32 @@
-export type UserRole = "admin" | "operator";
+// ─── Core roles ─────────────────────────────────────────────────────────────
+export type UserRole = "admin" | "operator" | "superadmin";
+
+// ─── Company ─────────────────────────────────────────────────────────────────
+export type CompanyStatus = "active" | "paused" | "disabled" | "expired";
+export type SubscriptionStatus = "active" | "trial" | "paused" | "expired";
+export type PlanType = "free" | "starter" | "pro" | "enterprise";
 
 export interface Company {
   id: string;
   name: string;
-  slug: string;
+  slug?: string;
   logo_url?: string;
   address?: string;
   gst_number?: string;
+  contact_number?: string;
+  contact_email?: string;
   currency: string;
   timezone: string;
+  joining_date?: string;
+  subscription_start?: string;
+  subscription_end?: string;
+  subscription_status?: SubscriptionStatus;
+  company_status?: CompanyStatus;
+  plan?: PlanType;
   created_at: string;
 }
 
+// ─── App user (company-scoped) ───────────────────────────────────────────────
 export interface AppUser {
   id: string;
   company_id: string;
@@ -23,6 +38,7 @@ export interface AppUser {
   created_at: string;
 }
 
+// ─── Category ────────────────────────────────────────────────────────────────
 export interface Category {
   id: string;
   company_id: string;
@@ -34,7 +50,9 @@ export interface Category {
   children?: Category[];
 }
 
+// ─── Product ─────────────────────────────────────────────────────────────────
 export type StockStatus = "ok" | "low" | "out";
+export type ExpiryStatus = "expired" | "expiring" | "ok";
 
 export interface Product {
   id: string;
@@ -49,10 +67,14 @@ export interface Product {
   quantity: number;
   min_stock: number;
   is_active: boolean;
+  manufacture_date?: string;
+  expiration_date?: string;
+  expiry_notification_days?: number;
   created_at: string;
   updated_at: string;
 }
 
+// ─── Sales ────────────────────────────────────────────────────────────────────
 export interface Sale {
   id: string;
   company_id: string;
@@ -90,6 +112,7 @@ export interface CartItem {
   line_total: number;
 }
 
+// ─── Purchases / Expenses ────────────────────────────────────────────────────
 export interface Purchase {
   id: string;
   company_id: string;
@@ -121,6 +144,7 @@ export interface Expense {
   created_at: string;
 }
 
+// ─── Invoice / Notification ───────────────────────────────────────────────────
 export interface Invoice {
   id: string;
   company_id: string;
@@ -141,16 +165,13 @@ export interface Notification {
   created_at: string;
 }
 
+// ─── Enums ───────────────────────────────────────────────────────────────────
 export type PaymentMethod = "cash" | "upi" | "card" | "bank_transfer";
 export type ExpenseCategory =
-  | "rent"
-  | "salary"
-  | "electricity"
-  | "transport"
-  | "marketing"
-  | "maintenance"
-  | "other";
+  | "rent" | "salary" | "electricity" | "transport"
+  | "marketing" | "maintenance" | "other";
 
+// ─── Analytics / KPIs ────────────────────────────────────────────────────────
 export interface DashboardKPIs {
   total_sales: number;
   total_purchases: number;
@@ -203,4 +224,78 @@ export interface Transaction {
   operator_name: string;
   created_at: string;
   payment_method?: PaymentMethod;
+}
+
+// ─── Superadmin ───────────────────────────────────────────────────────────────
+export interface SuperadminProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  contact_number?: string;
+  avatar_url?: string;
+  created_at: string;
+}
+
+export interface CompanyStat {
+  id: string;
+  name: string;
+  slug?: string;
+  address?: string;
+  contact_number?: string;
+  contact_email?: string;
+  logo_url?: string;
+  gst_number?: string;
+  joining_date?: string;
+  subscription_start?: string;
+  subscription_end?: string;
+  subscription_status: SubscriptionStatus;
+  company_status: CompanyStatus;
+  plan: PlanType;
+  users_count: number;
+  products_count: number;
+  sales_count: number;
+  total_sales_value: number;
+  created_at: string;
+}
+
+export interface SuperadminUser {
+  id: string;
+  company_id: string;
+  company_name: string;
+  full_name: string;
+  role: UserRole;
+  email: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PlatformKPIs {
+  total_companies: number;
+  active_companies: number;
+  expired_companies: number;
+  total_users: number;
+  active_users: number;
+  total_revenue: number;
+  monthly_revenue: number;
+  expiring_soon: number;
+}
+
+export interface SubscriptionRenewal {
+  id: string;
+  company_id: string;
+  company_name: string;
+  company_logo?: string;
+  plan: PlanType;
+  start_date: string;
+  end_date: string;
+  amount: number;
+  renewed_by: string;
+  created_at: string;
+}
+
+export interface CompanyGrowthPoint {
+  month: string;
+  new_companies: number;
+  new_users: number;
+  revenue: number;
 }

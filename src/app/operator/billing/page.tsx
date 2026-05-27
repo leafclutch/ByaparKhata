@@ -6,9 +6,9 @@ import { motion } from "framer-motion";
 import { Printer, ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/brand/Logo";
 import { getSaleWithItems } from "@/lib/services/sales";
 import { DEMO_SALES, DEMO_COMPANY } from "@/lib/mock-data";
+import { getInitials } from "@/lib/utils";
 import { formatINR, formatDateTime, PAYMENT_METHOD_LABELS } from "@/lib/utils";
 import type { Sale } from "@/lib/types";
 
@@ -63,11 +63,18 @@ function BillingContent() {
         {/* Header */}
         <div className="flex items-start justify-between pb-6 border-b border-slate-100">
           <div>
-            <Logo size="sm" />
+            {DEMO_COMPANY.logo_url ? (
+              <img src={DEMO_COMPANY.logo_url} alt={DEMO_COMPANY.name} className="h-10 object-contain" />
+            ) : (
+              <div className="h-10 w-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-bold text-sm">
+                {getInitials(DEMO_COMPANY.name)}
+              </div>
+            )}
             <div className="mt-3 text-xs text-slate-500 space-y-0.5">
-              <p className="font-semibold text-slate-800">{DEMO_COMPANY.name}</p>
-              <p>{DEMO_COMPANY.address}</p>
-              <p>GST: {DEMO_COMPANY.gst_number}</p>
+              <p className="font-bold text-base text-slate-900">{DEMO_COMPANY.name}</p>
+              {DEMO_COMPANY.address && <p>{DEMO_COMPANY.address}</p>}
+              {DEMO_COMPANY.gst_number && <p>GST: {DEMO_COMPANY.gst_number}</p>}
+              {DEMO_COMPANY.contact_email && <p>{DEMO_COMPANY.contact_email}</p>}
             </div>
           </div>
           <div className="text-right">
@@ -131,11 +138,8 @@ function BillingContent() {
 
         {/* Footer */}
         <div className="mt-8 pt-4 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-400">
-            Thank you for your business!
-            <span className="text-slate-300 mx-1">·</span>
-            Powered by <span className="text-brand-600 font-medium">VyaparKhata</span> · Leafclutch Technologies
-          </p>
+          <p className="text-xs text-slate-400">Thank you for your business!</p>
+          <p className="text-[10px] text-slate-300 mt-1">Powered by VyaparKhata</p>
         </div>
       </motion.div>
     </div>
