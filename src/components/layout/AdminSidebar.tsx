@@ -11,6 +11,8 @@ import { Logo } from "@/components/brand/Logo";
 import { useUIStore } from "@/store/uiStore";
 import { cn, getInitials } from "@/lib/utils";
 import { DEMO_ADMIN, DEMO_COMPANY, DEMO_NOTIFICATIONS } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/client";
+import { IS_DEMO_MODE } from "@/lib/env";
 
 const navGroups = [
   {
@@ -42,6 +44,11 @@ const navGroups = [
     ],
   },
 ];
+
+async function handleSignOut() {
+  if (!IS_DEMO_MODE) await createClient().auth.signOut();
+  window.location.assign("/login");
+}
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -132,13 +139,13 @@ export function AdminSidebar() {
               <p className="text-xs text-slate-400 truncate capitalize">{DEMO_ADMIN.role}</p>
             </div>
           </div>
-          <Link
-            href="/login"
+          <button
+            onClick={handleSignOut}
             className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-slate-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
             Sign out
-          </Link>
+          </button>
         </div>
       </aside>
     </>

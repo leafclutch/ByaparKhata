@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   if (denied) return denied;
 
   const { company_id, company_slug, username, full_name, role, password } = await req.json();
-  const email = `${username}@${company_slug}`;
+  const email = `${username}@${company_slug}.com`;
 
   const supabase = createAdminClient();
 

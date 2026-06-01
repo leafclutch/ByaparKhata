@@ -295,7 +295,7 @@ export default function CompanyDetailPage() {
               <Label>Username *</Label>
               <div className="flex items-center gap-1">
                 <Input value={newUserForm.username} onChange={(e) => setNewUserForm((f) => ({ ...f, username: e.target.value }))} placeholder="raj" className="flex-1" />
-                <span className="text-xs text-slate-400 shrink-0">@{company.slug}</span>
+                <span className="text-xs text-slate-400 shrink-0">@{company.slug}.com</span>
               </div>
             </div>
             <div className="space-y-1.5">

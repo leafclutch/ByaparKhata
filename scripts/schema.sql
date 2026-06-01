@@ -44,6 +44,7 @@ CREATE TABLE users (
   company_id  uuid REFERENCES companies(id) ON DELETE CASCADE,
   full_name   text,
   role        text CHECK (role IN ('admin','operator')) NOT NULL,
+  email       text,
   avatar_url  text,
   is_active   boolean DEFAULT true,
   created_at  timestamptz DEFAULT now()
