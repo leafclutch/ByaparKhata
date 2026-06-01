@@ -64,10 +64,15 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
 
-    // Company status check — lightweight Supabase query
+    // Company status check — cached in a 5-min httpOnly cookie to avoid a DB
+    // round-trip on every request. Cookie value = company_id so a new login
+    // (different company) always invalidates the cache.
+    const CO_STATUS_COOKIE = "co_ok";
     if (isProtectedRoute && pathname !== "/subscription-expired") {
       const companyId = meta?.company_id;
-      if (companyId) {
+      const cached = request.cookies.get(CO_STATUS_COOKIE)?.value;
+
+      if (companyId && cached !== companyId) {
         try {
           const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -98,6 +103,14 @@ export async function proxy(request: NextRequest) {
             if (data?.contact_email) url.searchParams.set("email", data.contact_email);
             return NextResponse.redirect(url);
           }
+
+          // Active — stamp the cache so the next 5 min skip this query
+          supabaseResponse.cookies.set(CO_STATUS_COOKIE, companyId, {
+            maxAge: 300,
+            httpOnly: true,
+            sameSite: "lax",
+            path: "/",
+          });
         } catch {
           // Fail open — never block the user due to a check failure
         }

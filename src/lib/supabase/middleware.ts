@@ -26,7 +26,18 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  // Stale/invalid refresh token — clear auth cookies immediately so the browser
+  // doesn't keep retrying and blocking every subsequent request for 10-20s.
+  if (error && (error as { code?: string }).code === "refresh_token_not_found") {
+    const cleared = NextResponse.next({ request });
+    request.cookies
+      .getAll()
+      .filter(({ name }) => name.startsWith("sb-"))
+      .forEach(({ name }) => cleared.cookies.delete(name));
+    return { supabaseResponse: cleared, user: null };
+  }
 
   return { supabaseResponse, user };
 }
