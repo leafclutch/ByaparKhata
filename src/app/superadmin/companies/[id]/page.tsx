@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import {
@@ -282,7 +282,10 @@ export default function CompanyDetailPage() {
       {/* Create user dialog */}
       <Dialog open={newUserOpen} onOpenChange={setNewUserOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Add User</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Add User</DialogTitle>
+            <DialogDescription>Create a new admin or operator account for this company.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label>Full Name *</Label>
@@ -320,7 +323,10 @@ export default function CompanyDetailPage() {
       {/* Reset password dialog */}
       <Dialog open={!!resetPwUser} onOpenChange={() => setResetPwUser(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Reset Password — {resetPwUser?.full_name}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Reset Password — {resetPwUser?.full_name}</DialogTitle>
+            <DialogDescription>Set a new password for this user. They will need to log in with the new password.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-1.5 py-2">
             <Label>New Password</Label>
             <Input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="••••••••" />
@@ -335,8 +341,12 @@ export default function CompanyDetailPage() {
       {/* Delete confirm */}
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Company</DialogTitle></DialogHeader>
-          <p className="text-sm text-slate-600 py-2">This will permanently delete <strong>{company.name}</strong> and all its data. This cannot be undone.</p>
+          <DialogHeader>
+            <DialogTitle>Delete Company</DialogTitle>
+            <DialogDescription>
+              This will permanently delete <strong>{company.name}</strong> and all its data. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>

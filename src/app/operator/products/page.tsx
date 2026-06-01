@@ -6,7 +6,7 @@ import { Plus, Edit2, Trash2, Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { toast } from "sonner";
@@ -214,7 +214,12 @@ export default function ProductsPage() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editProduct ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
+            <DialogDescription>
+              {editProduct ? "Update product details, pricing, or stock levels." : "Add a new product to your catalogue."}
+            </DialogDescription>
+          </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
             <div className="col-span-2 space-y-1.5">
               <Label>Product Name *</Label>
@@ -285,8 +290,10 @@ export default function ProductsPage() {
 
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Delete Product</DialogTitle></DialogHeader>
-          <p className="text-sm text-slate-600 py-2">Are you sure you want to delete this product? This action cannot be undone.</p>
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this product? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>

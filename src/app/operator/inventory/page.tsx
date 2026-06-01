@@ -6,7 +6,7 @@ import { Search, Edit2, AlertTriangle, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -119,9 +119,11 @@ export default function InventoryPage() {
 
       <Dialog open={!!editProduct} onOpenChange={() => setEditProduct(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Update Stock</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Update Stock</DialogTitle>
+            <DialogDescription><strong>{editProduct?.name}</strong> — currently {editProduct?.quantity} units</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-slate-600"><strong>{editProduct?.name}</strong> — currently {editProduct?.quantity} units</p>
             <div className="space-y-1.5">
               <Label>New Quantity</Label>
               <Input type="number" value={newQty} onChange={(e) => setNewQty(e.target.value)} min={0} autoFocus />

@@ -6,7 +6,7 @@ import { Plus, ChevronRight, ChevronDown, Edit2, Trash2, Tag, FolderOpen } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -252,6 +252,9 @@ export default function CategoriesPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{editTarget ? "Edit Category" : "Add Category"}</DialogTitle>
+            <DialogDescription>
+              {editTarget ? "Update the category name, parent, or colour." : "Create a new category in your product hierarchy."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
@@ -321,10 +324,10 @@ export default function CategoriesPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete Category</DialogTitle>
+            <DialogDescription>
+              Delete <strong>{deleteTarget?.name}</strong> and all its subcategories? This cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-slate-600 py-2">
-            Delete <strong>{deleteTarget?.name}</strong> and all its subcategories? This cannot be undone.
-          </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>
