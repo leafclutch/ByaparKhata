@@ -1,25 +1,28 @@
 // One-time script to create the superadmin user.
 // Run with: node scripts/create-superadmin.mjs
-// Requires .env.local to be present with SUPABASE_SERVICE_ROLE_KEY.
+// Requires .env.local to be present with the Supabase credentials.
 
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
-// Read .env.local manually
+// Parse .env.local — split only on the FIRST "=" so base64 JWT values are kept intact
 const envPath = resolve(process.cwd(), ".env.local");
 const env = Object.fromEntries(
   readFileSync(envPath, "utf8")
     .split("\n")
     .filter((l) => l.includes("=") && !l.startsWith("#"))
-    .map((l) => l.split("=").map((s) => s.trim()))
+    .map((l) => {
+      const idx = l.indexOf("=");
+      return [l.slice(0, idx).trim(), l.slice(idx + 1).trim()];
+    })
 );
 
-const SUPABASE_URL = env["NEXT_PUBLIC_SUPABASE_URL"];
+const SUPABASE_URL     = env["NEXT_PUBLIC_SUPABASE_URL"];
 const SERVICE_ROLE_KEY = env["SUPABASE_SERVICE_ROLE_KEY"];
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("❌  Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
+  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
   process.exit(1);
 }
 
@@ -27,58 +30,71 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const EMAIL = "admin@vyaparkhata.com";
-const PASSWORD = "admin@123";
-const FULL_NAME = "Roshan Singh";
-const CONTACT = "+91 98765 43210";
+// ── Edit these before running ───────────────────────────────────────────────
+const SA_EMAIL    = "admin@byaparkhata.com";
+const SA_PASSWORD = "ByaparKhata@2026";
+const SA_NAME     = "Super Admin";
+const SA_CONTACT  = "";
+// ───────────────────────────────────────────────────────────────────────────
 
 async function run() {
-  console.log("Creating superadmin user…");
+  console.log("Creating superadmin…");
 
-  // Create auth user
+  let userId;
+
+  // 1. Create auth user
   const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
-    email: EMAIL,
-    password: PASSWORD,
+    email: SA_EMAIL,
+    password: SA_PASSWORD,
     email_confirm: true,
-    user_metadata: { role: "superadmin", full_name: FULL_NAME },
+    user_metadata: { role: "superadmin", full_name: SA_NAME },
   });
 
   if (authErr) {
-    if (authErr.message.includes("already been registered")) {
-      console.log("ℹ️  User already exists — updating metadata…");
-      const { data: list } = await supabase.auth.admin.listUsers();
-      const existing = list?.users.find((u) => u.email === EMAIL);
-      if (existing) {
-        await supabase.auth.admin.updateUserById(existing.id, {
-          password: PASSWORD,
-          user_metadata: { role: "superadmin", full_name: FULL_NAME },
-        });
-        console.log("✅  Metadata updated.");
+    const alreadyExists =
+      authErr.message.toLowerCase().includes("already been registered") ||
+      authErr.message.toLowerCase().includes("already exists");
 
-        await supabase.from("superadmin").upsert({
-          id: existing.id, full_name: FULL_NAME, email: EMAIL, contact_number: CONTACT,
-        }, { onConflict: "id" });
-        console.log("✅  superadmin table row upserted.");
-      }
-    } else {
-      console.error("❌  Auth error:", authErr.message);
+    if (!alreadyExists) {
+      console.error("Auth error:", authErr.message);
+      return;
     }
-    return;
+
+    // User exists — fetch and update
+    console.log("User already exists — updating…");
+    const { data: list } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const existing = list?.users?.find((u) => u.email === SA_EMAIL);
+    if (!existing) { console.error("Could not locate existing user."); return; }
+
+    userId = existing.id;
+    const { error: upErr } = await supabase.auth.admin.updateUserById(userId, {
+      password: SA_PASSWORD,
+      user_metadata: { role: "superadmin", full_name: SA_NAME },
+    });
+    if (upErr) { console.error("Update error:", upErr.message); return; }
+    console.log("Auth user updated:", userId);
+
+  } else {
+    userId = authData.user.id;
+    console.log("Auth user created:", userId);
   }
 
-  console.log("✅  Auth user created:", authData.user.id);
+  // 2. Upsert into superadmin table
+  //    (the DB trigger handles this on first INSERT, but explicit upsert
+  //    covers the "user already existed" path as well)
+  const row = { id: userId, full_name: SA_NAME, email: SA_EMAIL };
+  if (SA_CONTACT) row.contact_number = SA_CONTACT;
 
-  // Insert into superadmin table
-  const { error: dbErr } = await supabase.from("superadmin").upsert({
-    id: authData.user.id, full_name: FULL_NAME, email: EMAIL, contact_number: CONTACT,
-  }, { onConflict: "id" });
+  const { error: dbErr } = await supabase
+    .from("superadmin")
+    .upsert(row, { onConflict: "id" });
 
-  if (dbErr) console.error("❌  superadmin table:", dbErr.message);
-  else console.log("✅  superadmin table row created.");
+  if (dbErr) { console.error("DB error:", dbErr.message); return; }
+  console.log("superadmin row upserted.");
 
-  console.log("\n🎉  Done! Login at /superadmin/login");
-  console.log(`   Email:    ${EMAIL}`);
-  console.log(`   Password: ${PASSWORD}`);
+  console.log("\nDone! Login at /superadmin/login");
+  console.log("  Email:   ", SA_EMAIL);
+  console.log("  Password:", SA_PASSWORD);
 }
 
 run();

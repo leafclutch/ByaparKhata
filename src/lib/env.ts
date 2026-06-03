@@ -1,6 +1,8 @@
-export const IS_DEMO_MODE =
-  !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL === "";
+export const IS_DEMO_MODE = (() => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  if (!url) return true;
+  try { new URL(url); return false; } catch { return true; }
+})();
 
 export function getSupabaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
