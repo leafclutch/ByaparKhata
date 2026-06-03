@@ -1,0 +1,2192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockFlow — Inventory Management</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #ffffff;
+            --bg2: #f7f7f8;
+            --bg3: #f0f0f2;
+            --sidebar: #ffffff;
+            --text: #111112;
+            --text2: #6b6b74;
+            --text3: #9b9ba4;
+            --border: #e8e8ec;
+            --border2: #d4d4da;
+            --accent: #4f46e5;
+            --accent-light: #ede9fe;
+            --accent-text: #4f46e5;
+            --green: #16a34a;
+            --green-bg: #dcfce7;
+            --green-text: #15803d;
+            --red: #dc2626;
+            --red-bg: #fee2e2;
+            --red-text: #b91c1c;
+            --amber: #d97706;
+            --amber-bg: #fef3c7;
+            --amber-text: #b45309;
+            --blue: #2563eb;
+            --blue-bg: #dbeafe;
+            --blue-text: #1d4ed8;
+            --radius: 8px;
+            --radius-lg: 12px;
+            --shadow: 0 1px 3px rgba(0, 0, 0, .08), 0 1px 2px rgba(0, 0, 0, .06);
+            --sidebar-w: 220px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #111113;
+            --bg2: #1a1a1e;
+            --bg3: #222226;
+            --sidebar: #111113;
+            --text: #f1f1f3;
+            --text2: #8f8f9a;
+            --text3: #5f5f6a;
+            --border: #2a2a30;
+            --border2: #363640;
+            --accent: #6366f1;
+            --accent-light: #1e1b4b;
+            --accent-text: #a5b4fc;
+            --green: #22c55e;
+            --green-bg: #14532d;
+            --green-text: #86efac;
+            --red: #ef4444;
+            --red-bg: #450a0a;
+            --red-text: #fca5a5;
+            --amber: #f59e0b;
+            --amber-bg: #451a03;
+            --amber-text: #fcd34d;
+            --blue: #3b82f6;
+            --blue-bg: #1e3a5f;
+            --blue-text: #93c5fd;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            background: var(--bg3);
+            min-height: 100vh;
+            line-height: 1.5
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none
+        }
+
+        button {
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            outline: none
+        }
+
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+            outline: none;
+            border: 1px solid var(--border2);
+            background: var(--bg);
+            color: var(--text);
+            border-radius: var(--radius);
+            padding: 8px 12px;
+            font-size: 14px;
+            width: 100%;
+            transition: border .15s
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--accent)
+        }
+
+        select {
+            cursor: pointer
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 600
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600
+        }
+
+        h3 {
+            font-size: 15px;
+            font-weight: 600
+        }
+
+        /* ── App layout ── */
+        #app {
+            display: flex;
+            height: 100vh;
+            overflow: hidden
+        }
+
+        #login-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg3)
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto
+        }
+
+        .sidebar-brand {
+            padding: 20px 16px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .brand-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700
+        }
+
+        .brand-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text)
+        }
+
+        .brand-sub {
+            font-size: 10px;
+            color: var(--text3);
+            margin-top: -2px
+        }
+
+        .sidebar-section {
+            padding: 8px 8px 0
+        }
+
+        .sidebar-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            padding: 12px 8px 4px
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: var(--radius);
+            color: var(--text2);
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+            margin-bottom: 1px
+        }
+
+        .nav-item:hover {
+            background: var(--bg3);
+            color: var(--text)
+        }
+
+        .nav-item.active {
+            background: var(--accent-light);
+            color: var(--accent-text)
+        }
+
+        .nav-item svg {
+            flex-shrink: 0;
+            opacity: .8
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 12px 8px;
+            border-top: 1px solid var(--border)
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: var(--radius);
+            cursor: pointer
+        }
+
+        .user-chip:hover {
+            background: var(--bg3)
+        }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0
+        }
+
+        .av-purple {
+            background: var(--accent-light);
+            color: var(--accent-text)
+        }
+
+        .av-green {
+            background: var(--green-bg);
+            color: var(--green-text)
+        }
+
+        .av-blue {
+            background: var(--blue-bg);
+            color: var(--blue-text)
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text)
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--text3)
+        }
+
+        /* ── Main area ── */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        .topbar {
+            height: 52px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 12px;
+            flex-shrink: 0
+        }
+
+        .topbar-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text)
+        }
+
+        .topbar-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: var(--radius);
+            font-size: 13.5px;
+            font-weight: 500;
+            transition: all .15s;
+            cursor: pointer;
+            border: none;
+            font-family: inherit
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff
+        }
+
+        .btn-primary:hover {
+            opacity: .9
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border2)
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg3)
+        }
+
+        .btn-danger {
+            background: var(--red-bg);
+            color: var(--red-text);
+            border: 1px solid transparent
+        }
+
+        .btn-danger:hover {
+            opacity: .85
+        }
+
+        .btn-success {
+            background: var(--green-bg);
+            color: var(--green-text)
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12.5px
+        }
+
+        .btn-icon {
+            padding: 7px;
+            border-radius: var(--radius);
+            background: transparent;
+            border: 1px solid var(--border2);
+            color: var(--text2)
+        }
+
+        .btn-icon:hover {
+            background: var(--bg3)
+        }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px
+        }
+
+        .card-sm {
+            padding: 16px
+        }
+
+        /* ── KPI cards ── */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px
+        }
+
+        .kpi {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 18px
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: var(--text3);
+            font-weight: 500;
+            margin-bottom: 6px
+        }
+
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -.5px
+        }
+
+        .kpi-change {
+            font-size: 12px;
+            margin-top: 4px;
+            font-weight: 500
+        }
+
+        .up {
+            color: var(--green)
+        }
+
+        .down {
+            color: var(--red)
+        }
+
+        /* ── Tables ── */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            background: var(--bg)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        th {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            padding: 11px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg2);
+            white-space: nowrap
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13.5px;
+            color: var(--text);
+            vertical-align: middle
+        }
+
+        tr:last-child td {
+            border-bottom: none
+        }
+
+        tr:hover td {
+            background: var(--bg2)
+        }
+
+        .td-right {
+            text-align: right
+        }
+
+        /* ── Badges ── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 9px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 600
+        }
+
+        .badge-green {
+            background: var(--green-bg);
+            color: var(--green-text)
+        }
+
+        .badge-red {
+            background: var(--red-bg);
+            color: var(--red-text)
+        }
+
+        .badge-amber {
+            background: var(--amber-bg);
+            color: var(--amber-text)
+        }
+
+        .badge-blue {
+            background: var(--blue-bg);
+            color: var(--blue-text)
+        }
+
+        .badge-gray {
+            background: var(--bg3);
+            color: var(--text2)
+        }
+
+        /* ── Search bar ── */
+        .search-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center
+        }
+
+        .search-wrap input {
+            padding-left: 34px;
+            min-width: 220px
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            color: var(--text3);
+            pointer-events: none
+        }
+
+        /* ── Section header ── */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px
+        }
+
+        .section-header h2 {
+            font-size: 16px
+        }
+
+        /* ── Alerts ── */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 13.5px;
+            margin-bottom: 12px;
+            border-left: 3px solid
+        }
+
+        .alert-amber {
+            background: var(--amber-bg);
+            color: var(--amber-text);
+            border-color: var(--amber)
+        }
+
+        .alert-red {
+            background: var(--red-bg);
+            color: var(--red-text);
+            border-color: var(--red)
+        }
+
+        /* ── Login ── */
+        .login-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, .08)
+        }
+
+        .login-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 28px;
+            justify-content: center
+        }
+
+        .login-form-group {
+            margin-bottom: 16px
+        }
+
+        .login-form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text2);
+            margin-bottom: 6px
+        }
+
+        .login-divider {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 16px 0;
+            color: var(--text3);
+            font-size: 12px
+        }
+
+        .login-divider::before,
+        .login-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border)
+        }
+
+        .role-pills {
+            display: flex;
+            gap: 6px
+        }
+
+        .role-pill {
+            flex: 1;
+            padding: 8px;
+            border: 1.5px solid var(--border2);
+            border-radius: var(--radius);
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            transition: all .15s;
+            color: var(--text2);
+            background: var(--bg)
+        }
+
+        .role-pill.sel {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--accent-text)
+        }
+
+        /* ── Charts ── */
+        .chart-container {
+            position: relative;
+            height: 220px
+        }
+
+        .chart-sm {
+            height: 160px
+        }
+
+        /* ── Grid layouts ── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px
+        }
+
+        .grid-half {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 16px
+        }
+
+        .grid-col {
+            display: flex;
+            flex-direction: column;
+            gap: 16px
+        }
+
+        /* ── Form grid ── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px
+        }
+
+        .form-group label {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text2)
+        }
+
+        .form-group.full {
+            grid-column: 1/-1
+        }
+
+        .form-actions {
+            grid-column: 1/-1;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 4px
+        }
+
+        /* ── Notification dot ── */
+        .notif-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--red);
+            border-radius: 50%;
+            display: inline-block;
+            vertical-align: middle
+        }
+
+        /* ── Company row actions ── */
+        .action-row {
+            display: flex;
+            gap: 6px;
+            align-items: center
+        }
+
+        /* ── Stock indicator ── */
+        .stock-bar {
+            height: 4px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            min-width: 80px
+        }
+
+        .stock-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width .3s
+        }
+
+        .stock-ok {
+            background: var(--green)
+        }
+
+        .stock-low {
+            background: var(--amber)
+        }
+
+        .stock-out {
+            background: var(--red)
+        }
+
+        /* ── Activity list ── */
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .activity-item:last-child {
+            border-bottom: none
+        }
+
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 5px
+        }
+
+        /* ── Modal ── */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 16px
+        }
+
+        .modal {
+            background: var(--bg);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            width: 100%;
+            max-width: 520px;
+            border: 1px solid var(--border)
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px
+        }
+
+        .modal-header h3 {
+            font-size: 16px
+        }
+
+        /* ── Skeleton ── */
+        .skel {
+            background: var(--bg3);
+            border-radius: 6px;
+            animation: pulse 1.4s ease-in-out infinite
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .5
+            }
+        }
+
+        /* ── Empty state ── */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text3)
+        }
+
+        .empty-state svg {
+            margin-bottom: 12px;
+            opacity: .4
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            margin-top: 4px
+        }
+
+        /* ── Top bar theme toggle ── */
+        .theme-btn {
+            padding: 7px;
+            border-radius: var(--radius);
+            background: transparent;
+            border: 1px solid var(--border2);
+            color: var(--text2);
+            display: flex;
+            align-items: center
+        }
+
+        .theme-btn:hover {
+            background: var(--bg3)
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 8px
+        }
+
+        /* ── Pages hidden ── */
+        .page {
+            display: none
+        }
+
+        .page.active {
+            display: block
+        }
+
+        /* ── Mobile menu ── */
+        .hamburger {
+            display: none
+        }
+
+        @media(max-width:768px) {
+            .sidebar {
+                position: fixed;
+                left: -240px;
+                top: 0;
+                bottom: 0;
+                z-index: 90;
+                transition: left .25s;
+                width: 230px
+            }
+
+            .sidebar.open {
+                left: 0;
+                box-shadow: 4px 0 20px rgba(0, 0, 0, .2)
+            }
+
+            .main {
+                width: 100%
+            }
+
+            .hamburger {
+                display: flex;
+                align-items: center
+            }
+
+            .grid-2,
+            .grid-3,
+            .grid-half {
+                grid-template-columns: 1fr
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr)
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr
+            }
+
+            .content {
+                padding: 16px
+            }
+
+            .topbar {
+                padding: 0 16px
+            }
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 2px;
+            background: var(--bg3);
+            border-radius: var(--radius);
+            padding: 3px;
+            width: fit-content;
+            margin-bottom: 20px
+        }
+
+        .tab {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text2);
+            cursor: pointer;
+            transition: all .15s
+        }
+
+        .tab.active {
+            background: var(--bg);
+            color: var(--text);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .1)
+        }
+
+        /* ── Trend mini chart bars ── */
+        .spark {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 32px
+        }
+
+        .spark-bar {
+            width: 6px;
+            border-radius: 2px;
+            background: var(--accent-light)
+        }
+
+        .spark-bar.hi {
+            background: var(--accent)
+        }
+
+        /* ── Number highlight ── */
+        .num-green {
+            color: var(--green);
+            font-weight: 600
+        }
+
+        .num-red {
+            color: var(--red);
+            font-weight: 600
+        }
+    </style>
+</head>
+
+<body data-theme="light">
+
+    <!-- ═══════════════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════════════════ -->
+    <div id="login-screen">
+        <div style="position:absolute;top:16px;right:16px">
+            <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+                <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <circle cx="12" cy="12" r="5" />
+                    <path
+                        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+            </button>
+        </div>
+        <div class="login-box">
+            <div class="login-logo">
+                <div
+                    style="width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800">
+                    SF</div>
+                <div>
+                    <div style="font-size:17px;font-weight:700;color:var(--text)">StockFlow</div>
+                    <div style="font-size:11px;color:var(--text3)">Inventory Management</div>
+                </div>
+            </div>
+            <div style="margin-bottom:20px">
+                <p
+                    style="font-size:11.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">
+                    Sign in as</p>
+                <div class="role-pills">
+                    <div class="role-pill sel" onclick="selectRole('super')">Super Admin</div>
+                    <div class="role-pill" onclick="selectRole('admin')">Company Admin</div>
+                    <div class="role-pill" onclick="selectRole('operator')">Operator</div>
+                </div>
+            </div>
+            <div class="login-form-group">
+                <label>Email address</label>
+                <input type="email" id="login-email" placeholder="you@company.com" value="admin@stockflow.io">
+            </div>
+            <div class="login-form-group">
+                <label>Password</label>
+                <input type="password" id="login-pw" placeholder="••••••••" value="password123">
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer">
+                    <input type="checkbox" checked style="width:auto;accent-color:var(--accent)"> Remember me
+                </label>
+                <a href="#" style="font-size:13px;color:var(--accent);font-weight:500">Forgot password?</a>
+            </div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px"
+                onclick="doLogin()">Sign in →</button>
+            <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:16px">Demo credentials pre-filled ·
+                No sign-up needed</p>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════════════════════ -->
+    <div id="app" style="display:none">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">SF</div>
+                <div>
+                    <div class="brand-name">StockFlow</div>
+                    <div class="brand-sub" id="tenant-name">Acme Corp</div>
+                </div>
+            </div>
+
+            <!-- Super Admin Nav -->
+            <nav id="nav-super" style="display:none">
+                <div class="sidebar-section">
+                    <div class="sidebar-label">Platform</div>
+                    <div class="nav-item active" onclick="nav('sa-dashboard')"><svg width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>Dashboard</div>
+                    <div class="nav-item" onclick="nav('sa-companies')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                        </svg>Companies</div>
+                    <div class="nav-item" onclick="nav('sa-subscriptions')"><svg width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="1" y="4" width="22" height="16" rx="2" />
+                            <line x1="1" y1="10" x2="23" y2="10" />
+                        </svg>Subscriptions</div>
+                    <div class="nav-item" onclick="nav('sa-notifications')"><svg width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 01-3.46 0" />
+                        </svg>Notifications <span class="notif-dot" style="margin-left:auto"></span></div>
+                    <div class="nav-item" onclick="nav('sa-audit')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>Audit Logs</div>
+                </div>
+            </nav>
+
+            <!-- Company Admin Nav -->
+            <nav id="nav-admin" style="display:none">
+                <div class="sidebar-section">
+                    <div class="sidebar-label">Overview</div>
+                    <div class="nav-item active" onclick="nav('ca-dashboard')"><svg width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>Dashboard</div>
+                    <div class="nav-item" onclick="nav('ca-reports')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>Reports</div>
+                    <div class="sidebar-label">Manage</div>
+                    <div class="nav-item" onclick="nav('ca-inventory')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+                        </svg>Inventory</div>
+                    <div class="nav-item" onclick="nav('ca-expenses')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23" />
+                            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                        </svg>Expenses</div>
+                </div>
+            </nav>
+
+            <!-- Operator Nav -->
+            <nav id="nav-operator" style="display:none">
+                <div class="sidebar-section">
+                    <div class="sidebar-label">Daily Work</div>
+                    <div class="nav-item active" onclick="nav('op-dashboard')"><svg width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>Dashboard</div>
+                    <div class="nav-item" onclick="nav('op-sales')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <path d="M16 10a4 4 0 01-8 0" />
+                        </svg>New Sale</div>
+                    <div class="nav-item" onclick="nav('op-expense')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23" />
+                            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                        </svg>Add Expense</div>
+                    <div class="nav-item" onclick="nav('op-purchase')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="9" cy="21" r="1" />
+                            <circle cx="20" cy="21" r="1" />
+                            <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" />
+                        </svg>Purchase</div>
+                    <div class="nav-item" onclick="nav('op-inventory')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+                        </svg>Inventory</div>
+                    <div class="nav-item" onclick="nav('op-history')"><svg width="16" height="16" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>History</div>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-chip" id="user-chip">
+                    <div class="avatar av-purple" id="user-av">SA</div>
+                    <div>
+                        <div class="user-name" id="user-name">Sarah Chen</div>
+                        <div class="user-role" id="user-role">Super Admin</div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:6px;justify-content:center"
+                    onclick="logout()">Sign out</button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="main">
+            <div class="topbar">
+                <button class="hamburger btn-icon" onclick="toggleSidebar()" aria-label="Menu">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12" />
+                        <line x1="3" y1="6" x2="21" y2="6" />
+                        <line x1="3" y1="18" x2="21" y2="18" />
+                    </svg>
+                </button>
+                <span class="topbar-title" id="page-title">Dashboard</span>
+                <div class="topbar-right">
+                    <button class="btn btn-secondary btn-sm" id="topbar-action" style="display:none"
+                        onclick="openModal()">+ Add</button>
+                    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+                        <svg id="theme-icon2" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5" />
+                            <path
+                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                        </svg>
+                    </button>
+                    <div style="position:relative;cursor:pointer" onclick="toggleNotifPanel()">
+                        <button class="btn-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                                <path d="M13.73 21a2 2 0 01-3.46 0" />
+                            </svg>
+                        </button>
+                        <span
+                            style="position:absolute;top:3px;right:3px;width:7px;height:7px;background:var(--red);border-radius:50%;border:2px solid var(--bg)"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="content" id="content">
+                <!-- Pages injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ NOTIFICATION PANEL ═══ -->
+    <div id="notif-panel"
+        style="display:none;position:fixed;top:52px;right:12px;width:320px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:80;overflow:hidden">
+        <div
+            style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <span style="font-weight:600;font-size:14px">Notifications</span>
+            <span style="font-size:12px;color:var(--accent);cursor:pointer">Mark all read</span>
+        </div>
+        <div style="max-height:340px;overflow-y:auto">
+            <div class="activity-item" style="padding:12px 16px;cursor:pointer">
+                <div class="activity-dot" style="background:var(--red)"></div>
+                <div>
+                    <div style="font-size:13px;font-weight:500">Low stock alert — Nike Air Max</div>
+                    <div style="font-size:12px;color:var(--text3);margin-top:2px">Only 3 units left · 2 min ago</div>
+                </div>
+            </div>
+            <div class="activity-item" style="padding:12px 16px;cursor:pointer">
+                <div class="activity-dot" style="background:var(--green)"></div>
+                <div>
+                    <div style="font-size:13px;font-weight:500">New sale — ₹12,400</div>
+                    <div style="font-size:12px;color:var(--text3);margin-top:2px">Operator Raj · 15 min ago</div>
+                </div>
+            </div>
+            <div class="activity-item" style="padding:12px 16px;cursor:pointer">
+                <div class="activity-dot" style="background:var(--blue)"></div>
+                <div>
+                    <div style="font-size:13px;font-weight:500">Monthly report ready</div>
+                    <div style="font-size:12px;color:var(--text3);margin-top:2px">May 2026 report generated · 1 hr ago
+                    </div>
+                </div>
+            </div>
+            <div class="activity-item" style="padding:12px 16px;cursor:pointer">
+                <div class="activity-dot" style="background:var(--amber)"></div>
+                <div>
+                    <div style="font-size:13px;font-weight:500">Subscription renewal in 7 days</div>
+                    <div style="font-size:12px;color:var(--text3);margin-top:2px">Pro plan expires Jun 2 · System</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL ═══ -->
+    <div id="modal" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeModal()">
+        <div class="modal" id="modal-inner">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Item</h3>
+                <button class="btn-icon" onclick="closeModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════
+        // STATE
+        // ═══════════════════════════════════════════════════════
+        let currentRole = 'super';
+        let currentPage = '';
+        let charts = {};
+        let darkMode = false;
+        let notifOpen = false;
+        let modalCallback = null;
+
+        // ═══════════════════════════════════════════════════════
+        // AUTH
+        // ═══════════════════════════════════════════════════════
+        function selectRole(r) {
+            currentRole = r;
+            document.querySelectorAll('.role-pill').forEach(p => p.classList.remove('sel'));
+            const idx = { super: 0, admin: 1, operator: 2 }[r];
+            document.querySelectorAll('.role-pill')[idx].classList.add('sel');
+        }
+
+        function doLogin() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app').style.display = 'flex';
+            setupRole();
+            const defaults = { super: 'sa-dashboard', admin: 'ca-dashboard', operator: 'op-dashboard' };
+            nav(defaults[currentRole]);
+        }
+
+        function logout() {
+            Object.values(charts).forEach(c => { try { c.destroy() } catch (e) { } });
+            charts = {};
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+
+        function setupRole() {
+            document.querySelectorAll('[id^="nav-"]').forEach(n => n.style.display = 'none');
+            document.getElementById('nav-' + currentRole).style.display = 'block';
+            const map = {
+                super: { name: 'Sarah Chen', role: 'Super Admin', av: 'SC', avClass: 'av-purple', tenant: 'Platform Admin' },
+                admin: { name: 'Arjun Mehta', role: 'Company Admin', av: 'AM', avClass: 'av-green', tenant: 'Nexus Retail' },
+                operator: { name: 'Raj Kumar', role: 'Operator', av: 'RK', avClass: 'av-blue', tenant: 'Nexus Retail' }
+            };
+            const u = map[currentRole];
+            document.getElementById('user-name').textContent = u.name;
+            document.getElementById('user-role').textContent = u.role;
+            document.getElementById('user-av').textContent = u.av;
+            document.getElementById('user-av').className = 'avatar ' + u.avClass;
+            document.getElementById('tenant-name').textContent = u.tenant;
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // NAVIGATION
+        // ═══════════════════════════════════════════════════════
+        function nav(page) {
+            currentPage = page;
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            Object.values(charts).forEach(c => { try { c.destroy() } catch (e) { } });
+            charts = {};
+            closeSidebar();
+
+            const titles = {
+                'sa-dashboard': 'Dashboard', 'sa-companies': 'Companies', 'sa-subscriptions': 'Subscriptions',
+                'sa-notifications': 'Notifications', 'sa-audit': 'Audit Logs',
+                'ca-dashboard': 'Dashboard', 'ca-reports': 'Reports & Analytics', 'ca-inventory': 'Inventory',
+                'ca-expenses': 'Expenses',
+                'op-dashboard': 'Dashboard', 'op-sales': 'New Sale', 'op-expense': 'Add Expense',
+                'op-purchase': 'New Purchase', 'op-inventory': 'Inventory', 'op-history': 'Transaction History'
+            };
+            document.getElementById('page-title').textContent = titles[page] || page;
+
+            const addPages = ['op-sales', 'op-expense', 'op-purchase', 'ca-expenses', 'sa-companies', 'ca-inventory', 'op-inventory'];
+            const topBtn = document.getElementById('topbar-action');
+            if (addPages.includes(page)) { topBtn.style.display = 'flex'; topBtn.textContent = '+  Add' } else { topBtn.style.display = 'none' }
+
+            const content = document.getElementById('content');
+            content.innerHTML = '';
+
+            const renders = {
+                'sa-dashboard': renderSADashboard, 'sa-companies': renderSACompanies,
+                'sa-subscriptions': renderSASubscriptions, 'sa-notifications': renderSANotifications,
+                'sa-audit': renderSAAudit,
+                'ca-dashboard': renderCADashboard, 'ca-reports': renderCAReports,
+                'ca-inventory': renderCAInventory, 'ca-expenses': renderCAExpenses,
+                'op-dashboard': renderOPDashboard, 'op-sales': renderOPSales,
+                'op-expense': renderOPExpense, 'op-purchase': renderOPPurchase,
+                'op-inventory': renderOPInventory, 'op-history': renderOPHistory
+            };
+
+            if (renders[page]) renders[page](content);
+            else content.innerHTML = '<p style="color:var(--text3);margin-top:40px;text-align:center">Page coming soon</p>';
+
+            setTimeout(() => initCharts(page), 80);
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // SUPER ADMIN — DASHBOARD
+        // ═══════════════════════════════════════════════════════
+        function renderSADashboard(el) {
+            el.innerHTML = `
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Companies</div><div class="kpi-value">148</div><div class="kpi-change up">↑ 12 this month</div></div>
+    <div class="kpi"><div class="kpi-label">Active Subscriptions</div><div class="kpi-value">132</div><div class="kpi-change up">↑ 89%</div></div>
+    <div class="kpi"><div class="kpi-label">MRR</div><div class="kpi-value">₹8.4L</div><div class="kpi-change up">↑ 14.2%</div></div>
+    <div class="kpi"><div class="kpi-label">Inactive / Suspended</div><div class="kpi-value">16</div><div class="kpi-change down">↑ 3 this week</div></div>
+  </div>
+
+  <div class="grid-half" style="margin-bottom:16px">
+    <div class="card">
+      <div class="section-header"><h2>Revenue overview</h2><select style="width:auto;font-size:12.5px;padding:4px 8px"><option>Last 6 months</option><option>Last year</option></select></div>
+      <div class="chart-container"><canvas id="sa-revenue-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="section-header"><h2>Platform activity</h2></div>
+      <div id="sa-activity">
+        ${activityHTML([
+                { col: 'green', title: 'TechMart Inc joined', sub: 'New Pro plan · 2 min ago' },
+                { col: 'amber', title: 'Sunrise Traders suspended', sub: 'Payment overdue · 18 min ago' },
+                { col: 'blue', title: 'GlobalShop upgraded plan', sub: 'Pro → Enterprise · 1 hr ago' },
+                { col: 'green', title: 'FreshMart activated', sub: 'Trial → Paid · 3 hr ago' },
+                { col: 'red', title: 'PeakBuy disabled', sub: 'Compliance issue · 5 hr ago' },
+                { col: 'green', title: 'DealZone joined', sub: 'New Starter plan · 6 hr ago' },
+            ])}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-header">
+      <h2>Recent companies</h2>
+      <button class="btn btn-secondary btn-sm" onclick="nav('sa-companies')">View all →</button>
+    </div>
+    ${companyTableHTML(5)}
+  </div>`;
+        }
+
+        function activityHTML(items) {
+            return items.map(i => `
+    <div class="activity-item">
+      <div class="activity-dot" style="background:var(--${i.col})"></div>
+      <div><div style="font-size:13px;font-weight:500">${i.title}</div><div style="font-size:12px;color:var(--text3)">${i.sub}</div></div>
+    </div>`).join('');
+        }
+
+        const companies = [
+            { name: 'TechMart Inc', admin: 'tech@techmart.in', plan: 'Enterprise', status: 'active', users: 12, sales: '₹24.5L', joined: 'May 2026' },
+            { name: 'Sunrise Traders', admin: 'admin@sunrise.co', plan: 'Pro', status: 'suspended', users: 5, sales: '₹8.2L', joined: 'Jan 2026' },
+            { name: 'GlobalShop', admin: 'gs@globalshop.io', plan: 'Enterprise', status: 'active', users: 18, sales: '₹61.0L', joined: 'Mar 2025' },
+            { name: 'FreshMart', admin: 'fresh@freshmart.com', plan: 'Starter', status: 'active', users: 3, sales: '₹3.1L', joined: 'Apr 2026' },
+            { name: 'PeakBuy', admin: 'info@peakbuy.in', plan: 'Pro', status: 'inactive', users: 7, sales: '₹11.8L', joined: 'Nov 2025' },
+            { name: 'DealZone', admin: 'dz@dealzone.com', plan: 'Starter', status: 'active', users: 2, sales: '₹1.4L', joined: 'May 2026' },
+            { name: 'QuickStock', admin: 'q@quickstock.io', plan: 'Pro', status: 'active', users: 9, sales: '₹19.0L', joined: 'Feb 2026' },
+            { name: 'MegaTrade', admin: 'm@megatrade.in', plan: 'Enterprise', status: 'active', users: 22, sales: '₹89.5L', joined: 'Jun 2025' },
+        ];
+
+        function companyTableHTML(limit) {
+            const rows = companies.slice(0, limit || companies.length).map(c => `<tr>
+    <td><div style="font-weight:500">${c.name}</div><div style="font-size:12px;color:var(--text3)">${c.admin}</div></td>
+    <td><span class="badge badge-${c.plan === 'Enterprise' ? 'blue' : c.plan === 'Pro' ? 'green' : 'gray'}">${c.plan}</span></td>
+    <td>${c.users}</td>
+    <td>${c.sales}</td>
+    <td>${c.joined}</td>
+    <td><span class="badge badge-${c.status === 'active' ? 'green' : c.status === 'suspended' ? 'amber' : 'red'}">${c.status}</span></td>
+    <td class="td-right"><div class="action-row">
+      <button class="btn btn-secondary btn-sm" onclick="toggleStatus(this,'${c.status}')">
+        ${c.status === 'active' ? 'Disable' : 'Enable'}
+      </button>
+      <button class="btn btn-secondary btn-sm">Edit</button>
+    </div></td>
+  </tr>`).join('');
+            return `<div class="table-wrap"><table>
+    <thead><tr><th>Company</th><th>Plan</th><th>Users</th><th>Total sales</th><th>Joined</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+        }
+
+        function toggleStatus(btn, status) {
+            btn.textContent = status === 'active' ? 'Enable' : 'Disable';
+            alert(status === 'active' ? 'Company disabled.' : 'Company enabled.');
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // SUPER ADMIN — COMPANIES
+        // ═══════════════════════════════════════════════════════
+        function renderSACompanies(el) {
+            el.innerHTML = `
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Search companies…" oninput="filterTable(this.value)" style="min-width:260px">
+    </div>
+    <select style="width:auto;padding:8px 12px" onchange="filterByPlan(this.value)">
+      <option value="">All plans</option>
+      <option>Starter</option>
+      <option>Pro</option>
+      <option>Enterprise</option>
+    </select>
+    <select style="width:auto;padding:8px 12px">
+      <option value="">All status</option>
+      <option>Active</option>
+      <option>Suspended</option>
+      <option>Inactive</option>
+    </select>
+    <button class="btn btn-primary" onclick="openAddCompanyModal()">+ Add company</button>
+  </div>
+  <div id="companies-table">${companyTableHTML()}</div>`;
+        }
+
+        function renderSASubscriptions(el) {
+            el.innerHTML = `
+  <div class="kpi-grid" style="max-width:600px">
+    <div class="kpi"><div class="kpi-label">MRR</div><div class="kpi-value">₹8.4L</div><div class="kpi-change up">↑ 14%</div></div>
+    <div class="kpi"><div class="kpi-label">ARR</div><div class="kpi-value">₹1.01Cr</div><div class="kpi-change up">↑ 18%</div></div>
+    <div class="kpi"><div class="kpi-label">Churn rate</div><div class="kpi-value">2.1%</div><div class="kpi-change down">↑ 0.3%</div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2 style="margin-bottom:16px">Plan distribution</h2>
+    <div class="chart-container" style="height:240px"><canvas id="plan-chart"></canvas></div>
+  </div>`;
+        }
+
+        function renderSANotifications(el) {
+            el.innerHTML = `
+  <div class="card">
+    <div class="section-header"><h2>Send notification</h2></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Target</label>
+        <select><option>All companies</option><option>TechMart Inc</option><option>GlobalShop</option><option>FreshMart</option></select></div>
+      <div class="form-group"><label>Type</label>
+        <select><option>Info</option><option>Warning</option><option>Alert</option></select></div>
+      <div class="form-group full"><label>Message</label>
+        <textarea rows="3" placeholder="Write your notification message…"></textarea></div>
+      <div class="form-actions">
+        <button class="btn btn-secondary">Save draft</button>
+        <button class="btn btn-primary">Send notification →</button>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2 style="margin-bottom:16px">Sent history</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Message</th><th>Target</th><th>Type</th><th>Sent at</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>System maintenance on Jun 1</td><td>All companies</td><td><span class="badge badge-amber">Warning</span></td><td>May 24 · 09:00</td><td><span class="badge badge-green">Delivered</span></td></tr>
+        <tr><td>New feature: Bulk import live</td><td>All companies</td><td><span class="badge badge-blue">Info</span></td><td>May 20 · 14:30</td><td><span class="badge badge-green">Delivered</span></td></tr>
+        <tr><td>Payment failed — action needed</td><td>Sunrise Traders</td><td><span class="badge badge-red">Alert</span></td><td>May 18 · 11:15</td><td><span class="badge badge-green">Delivered</span></td></tr>
+      </tbody>
+    </table></div>
+  </div>`;
+        }
+
+        function renderSAAudit(el) {
+            const events = [
+                { user: 'Sarah Chen', action: 'Suspended company', target: 'Sunrise Traders', ip: '192.168.1.10', time: 'Today 11:42' },
+                { user: 'Sarah Chen', action: 'Created company', target: 'DealZone', ip: '192.168.1.10', time: 'Today 09:15' },
+                { user: 'System', action: 'Auto-disabled account', target: 'PeakBuy', ip: '—', time: 'Today 03:00' },
+                { user: 'Sarah Chen', action: 'Reset password', target: 'FreshMart Admin', ip: '192.168.1.10', time: 'Yesterday 16:30' },
+                { user: 'Sarah Chen', action: 'Updated plan', target: 'GlobalShop → Enterprise', ip: '192.168.1.10', time: 'May 24 14:10' },
+                { user: 'Sarah Chen', action: 'Sent global notification', target: 'All companies', ip: '192.168.1.10', time: 'May 24 09:00' },
+            ];
+            el.innerHTML = `
+  <div class="card">
+    <div class="section-header"><h2>Audit logs</h2>
+      <div style="display:flex;gap:8px"><select style="width:auto;padding:6px 10px;font-size:12.5px"><option>All users</option><option>Sarah Chen</option><option>System</option></select>
+      <button class="btn btn-secondary btn-sm">Export CSV</button></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>User</th><th>Action</th><th>Target</th><th>IP</th><th>Time</th></tr></thead>
+      <tbody>${events.map(e => `<tr>
+        <td style="font-weight:500">${e.user}</td>
+        <td>${e.action}</td>
+        <td style="color:var(--text2)">${e.target}</td>
+        <td style="font-family:monospace;font-size:12.5px;color:var(--text3)">${e.ip}</td>
+        <td style="color:var(--text3)">${e.time}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // COMPANY ADMIN — DASHBOARD
+        // ═══════════════════════════════════════════════════════
+        function renderCADashboard(el) {
+            el.innerHTML = `
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total revenue</div><div class="kpi-value">₹24.5L</div><div class="kpi-change up">↑ 18.4% vs last month</div></div>
+    <div class="kpi"><div class="kpi-label">Net profit</div><div class="kpi-value">₹6.8L</div><div class="kpi-change up">↑ 12.1%</div></div>
+    <div class="kpi"><div class="kpi-label">Total expenses</div><div class="kpi-value">₹4.2L</div><div class="kpi-change down">↑ 8.3%</div></div>
+    <div class="kpi"><div class="kpi-label">Purchase cost</div><div class="kpi-value">₹13.5L</div><div class="kpi-change up">↑ 5.7%</div></div>
+  </div>
+
+  <div class="alert alert-amber">⚠ 4 products are below minimum stock level. <a href="#" style="color:var(--amber);font-weight:600" onclick="nav('ca-inventory');return false">View inventory →</a></div>
+
+  <div class="grid-half" style="margin-bottom:16px">
+    <div class="card">
+      <div class="section-header"><h2>Sales vs expenses</h2><span style="font-size:12px;color:var(--text3)">May 2026</span></div>
+      <div class="chart-container"><canvas id="ca-main-chart"></canvas></div>
+    </div>
+    <div class="grid-col">
+      <div class="card card-sm">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Top selling products</div>
+        ${topProducts()}
+      </div>
+      <div class="card card-sm">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Low stock alerts</div>
+        ${lowStockHTML()}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-header"><h2>Recent transactions</h2>
+      <button class="btn btn-secondary btn-sm" onclick="nav('op-history')">View all →</button>
+    </div>
+    ${transactionTableHTML(6)}
+  </div>`;
+        }
+
+        function topProducts() {
+            const prods = [
+                { name: 'Nike Air Max', sales: '₹3.2L', units: 84, pct: 85 },
+                { name: 'Samsung TV 43"', sales: '₹2.8L', units: 14, pct: 72 },
+                { name: 'Jeans Classic Fit', sales: '₹1.9L', units: 210, pct: 60 },
+                { name: 'Laptop Stand Pro', sales: '₹1.4L', units: 62, pct: 45 },
+            ];
+            return prods.map(p => `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:500">${p.name}</div>
+      <div style="font-size:12px;color:var(--text3)">${p.units} units · ${p.sales}</div>
+    </div>
+    <div style="text-align:right">
+      <div class="stock-bar" style="width:80px">
+        <div class="stock-bar-fill stock-ok" style="width:${p.pct}%"></div>
+      </div>
+    </div>
+  </div>`).join('');
+        }
+
+        function lowStockHTML() {
+            return [
+                { name: 'Nike Air Max 90', stock: 3, min: 10 },
+                { name: 'USB-C Hub 7-in-1', stock: 5, min: 15 },
+                { name: 'Running Shorts M', stock: 7, min: 20 },
+                { name: 'Bluetooth Speaker', stock: 2, min: 8 },
+            ].map(p => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <div style="flex:1;font-size:13px">${p.name}</div>
+    <span class="badge badge-${p.stock <= 3 ? 'red' : 'amber'}">${p.stock} left</span>
+  </div>`).join('');
+        }
+
+        const txns = [
+            { id: '#INV-2847', type: 'Sale', item: 'Nike Air Max 90 x2', amount: '₹8,400', by: 'Raj Kumar', time: 'Today 14:30', tag: 'sale' },
+            { id: '#EXP-0342', type: 'Expense', item: 'Electricity bill', amount: '₹12,800', by: 'Priya Shah', time: 'Today 11:00', tag: 'expense' },
+            { id: '#PUR-1190', type: 'Purchase', item: 'Samsung TV 43" x5', amount: '₹1,40,000', by: 'Raj Kumar', time: 'Yesterday 16:45', tag: 'purchase' },
+            { id: '#INV-2846', type: 'Sale', item: 'Laptop Stand x3', amount: '₹3,600', by: 'Raj Kumar', time: 'Yesterday 13:20', tag: 'sale' },
+            { id: '#EXP-0341', type: 'Expense', item: 'Rent — May', amount: '₹45,000', by: 'Priya Shah', time: 'May 24', tag: 'expense' },
+            { id: '#INV-2845', type: 'Sale', item: 'Jeans Classic x6', amount: '₹5,400', by: 'Raj Kumar', time: 'May 24', tag: 'sale' },
+        ];
+
+        function transactionTableHTML(limit) {
+            const tagColors = { sale: 'green', expense: 'red', purchase: 'blue' };
+            return `<div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>Type</th><th>Details</th><th>Amount</th><th>By</th><th>Date</th></tr></thead>
+    <tbody>${txns.slice(0, limit).map(t => `<tr>
+      <td style="font-family:monospace;font-size:12.5px">${t.id}</td>
+      <td><span class="badge badge-${tagColors[t.tag]}">${t.type}</span></td>
+      <td>${t.item}</td>
+      <td style="font-weight:500">${t.amount}</td>
+      <td style="color:var(--text2)">${t.by}</td>
+      <td style="color:var(--text3)">${t.time}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+        }
+
+        function renderCAReports(el) {
+            el.innerHTML = `
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(this,'r-overview')">Overview</div>
+    <div class="tab" onclick="switchTab(this,'r-sales')">Sales</div>
+    <div class="tab" onclick="switchTab(this,'r-expenses')">Expenses</div>
+    <div class="tab" onclick="switchTab(this,'r-inventory')">Inventory</div>
+  </div>
+
+  <div id="r-overview">
+    <div class="kpi-grid" style="margin-bottom:16px">
+      <div class="kpi"><div class="kpi-label">Gross revenue</div><div class="kpi-value">₹24.5L</div></div>
+      <div class="kpi"><div class="kpi-label">COGS</div><div class="kpi-value">₹13.5L</div></div>
+      <div class="kpi"><div class="kpi-label">Gross profit</div><div class="kpi-value">₹11.0L</div></div>
+      <div class="kpi"><div class="kpi-label">Net profit</div><div class="kpi-value">₹6.8L</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="section-header"><h2>Monthly performance</h2></div>
+        <div class="chart-container"><canvas id="rpt-monthly"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-header"><h2>Expense breakdown</h2></div>
+        <div class="chart-container"><canvas id="rpt-expense-pie"></canvas></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+      <button class="btn btn-secondary">Export PDF</button>
+      <button class="btn btn-primary">Export Excel</button>
+    </div>
+  </div>
+  <div id="r-sales" style="display:none">
+    <div class="card"><div class="chart-container" style="height:280px"><canvas id="rpt-sales"></canvas></div></div>
+    ${transactionTableHTML(6)}
+  </div>
+  <div id="r-expenses" style="display:none">
+    <div class="card">${expenseListHTML()}</div>
+  </div>
+  <div id="r-inventory" style="display:none">
+    ${inventoryTableHTML()}
+  </div>`;
+            setTimeout(() => {
+                initReportCharts();
+            }, 100);
+        }
+
+        function switchTab(el, tabId) {
+            el.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            const tabs = ['r-overview', 'r-sales', 'r-expenses', 'r-inventory'];
+            tabs.forEach(t => {
+                const d = document.getElementById(t);
+                if (d) d.style.display = t === tabId ? 'block' : 'none';
+            });
+            if (tabId === 'r-sales') setTimeout(() => {
+                if (!charts['rpt-sales']) {
+                    const ctx = document.getElementById('rpt-sales');
+                    if (ctx) charts['rpt-sales'] = new Chart(ctx, { type: 'bar', data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'], datasets: [{ label: 'Sales', data: [18.2, 21.4, 19.8, 22.1, 24.5], backgroundColor: 'rgba(79,70,229,.7)', borderRadius: 4 }] }, options: baseOpts('₹', true) });
+                }
+            }, 50);
+        }
+
+        function renderCAInventory(el) {
+            el.innerHTML = `
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Search products…" style="min-width:240px">
+    </div>
+    <select style="width:auto;padding:8px 12px"><option>All categories</option><option>Footwear</option><option>Electronics</option><option>Apparel</option><option>Accessories</option></select>
+    <button class="btn btn-primary" onclick="openAddProductModal()">+ Add product</button>
+    <button class="btn btn-secondary">Import CSV</button>
+  </div>
+  ${inventoryTableHTML()}`;
+        }
+
+        function inventoryTableHTML() {
+            const items = [
+                { sku: 'SKU-001', name: 'Nike Air Max 90', cat: 'Footwear', qty: 3, min: 10, buy: '₹4,200', sell: '₹6,999', val: '₹20,997', status: 'low' },
+                { sku: 'SKU-002', name: 'Samsung TV 43"', cat: 'Electronics', qty: 12, min: 5, buy: '₹24,000', sell: '₹38,000', val: '₹4,56,000', status: 'ok' },
+                { sku: 'SKU-003', name: 'Jeans Classic Fit', cat: 'Apparel', qty: 85, min: 20, buy: '₹450', sell: '₹1,299', val: '₹38,250', status: 'ok' },
+                { sku: 'SKU-004', name: 'USB-C Hub 7-in-1', cat: 'Accessories', qty: 5, min: 15, buy: '₹1,100', sell: '₹2,499', val: '₹5,500', status: 'low' },
+                { sku: 'SKU-005', name: 'Laptop Stand Pro', cat: 'Accessories', qty: 28, min: 10, buy: '₹850', sell: '₹1,999', val: '₹23,800', status: 'ok' },
+                { sku: 'SKU-006', name: 'Running Shorts M', cat: 'Apparel', qty: 7, min: 20, buy: '₹280', sell: '₹699', val: '₹1,960', status: 'low' },
+                { sku: 'SKU-007', name: 'Bluetooth Speaker', cat: 'Electronics', qty: 2, min: 8, buy: '₹1,800', sell: '₹3,499', val: '₹3,600', status: 'out' },
+                { sku: 'SKU-008', name: 'Wireless Mouse', cat: 'Electronics', qty: 42, min: 15, buy: '₹620', sell: '₹1,299', val: '₹26,040', status: 'ok' },
+            ];
+            const st = { ok: 'badge-green', low: 'badge-amber', out: 'badge-red' };
+            const stl = { ok: 'In stock', low: 'Low stock', out: 'Out of stock' };
+            return `<div class="table-wrap"><table>
+    <thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Qty</th><th>Min stock</th><th>Buy price</th><th>Sell price</th><th>Stock value</th><th>Status</th><th></th></tr></thead>
+    <tbody>${items.map(i => `<tr>
+      <td style="font-family:monospace;font-size:12px;color:var(--text3)">${i.sku}</td>
+      <td style="font-weight:500">${i.name}</td>
+      <td><span class="badge badge-gray">${i.cat}</span></td>
+      <td style="font-weight:500">${i.qty}</td>
+      <td style="color:var(--text3)">${i.min}</td>
+      <td>${i.buy}</td>
+      <td>${i.sell}</td>
+      <td>${i.val}</td>
+      <td><span class="badge ${st[i.status]}">${stl[i.status]}</span></td>
+      <td><div class="action-row">
+        <button class="btn btn-secondary btn-sm">Edit</button>
+        <button class="btn btn-danger btn-sm">Delete</button>
+      </div></td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+        }
+
+        function renderCAExpenses(el) {
+            el.innerHTML = `
+  <div class="kpi-grid" style="max-width:500px">
+    <div class="kpi"><div class="kpi-label">Total this month</div><div class="kpi-value">₹4.2L</div><div class="kpi-change down">↑ 8.3%</div></div>
+    <div class="kpi"><div class="kpi-label">Pending approval</div><div class="kpi-value">3</div></div>
+  </div>
+  <div class="card">${expenseListHTML()}</div>`;
+        }
+
+        function expenseListHTML() {
+            const items = [
+                { cat: 'Rent', desc: 'Office rent — May', amount: '₹45,000', date: 'May 24', by: 'Priya Shah', status: 'approved' },
+                { cat: 'Utilities', desc: 'Electricity bill', amount: '₹12,800', date: 'May 24', by: 'Raj Kumar', status: 'approved' },
+                { cat: 'Salary', desc: 'Staff salaries — May', amount: '₹1,80,000', date: 'May 22', by: 'Priya Shah', status: 'approved' },
+                { cat: 'Marketing', desc: 'Google Ads campaign', amount: '₹25,000', date: 'May 20', by: 'Raj Kumar', status: 'pending' },
+                { cat: 'Logistics', desc: 'Courier charges', amount: '₹8,400', date: 'May 18', by: 'Raj Kumar', status: 'approved' },
+                { cat: 'Maintenance', desc: 'AC service & repairs', amount: '₹6,200', date: 'May 15', by: 'Raj Kumar', status: 'pending' },
+            ];
+            const hdr = `<div class="section-header"><h2>Expense log</h2><button class="btn btn-secondary btn-sm">Export</button></div>`;
+            const rows = items.map(i => `<tr>
+    <td><span class="badge badge-gray">${i.cat}</span></td>
+    <td style="font-weight:500">${i.desc}</td>
+    <td style="font-weight:600">${i.amount}</td>
+    <td style="color:var(--text3)">${i.date}</td>
+    <td style="color:var(--text2)">${i.by}</td>
+    <td><span class="badge badge-${i.status === 'approved' ? 'green' : 'amber'}">${i.status}</span></td>
+    <td><button class="btn btn-secondary btn-sm">Edit</button></td>
+  </tr>`).join('');
+            return hdr + `<div class="table-wrap"><table>
+    <thead><tr><th>Category</th><th>Description</th><th>Amount</th><th>Date</th><th>Added by</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // OPERATOR
+        // ═══════════════════════════════════════════════════════
+        function renderOPDashboard(el) {
+            el.innerHTML = `
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">My sales today</div><div class="kpi-value">₹28,400</div><div class="kpi-change up">↑ 3 transactions</div></div>
+    <div class="kpi"><div class="kpi-label">Total items sold</div><div class="kpi-value">24</div></div>
+    <div class="kpi"><div class="kpi-label">Expenses added</div><div class="kpi-value">2</div></div>
+    <div class="kpi"><div class="kpi-label">Purchases added</div><div class="kpi-value">1</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+    ${[
+                    { label: 'New sale', sub: 'Record a sales transaction', icon: 'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z', page: 'op-sales', color: 'accent' },
+                    { label: 'Add expense', sub: 'Log an expense entry', icon: 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6', page: 'op-expense', color: 'green' },
+                    { label: 'New purchase', sub: 'Record incoming stock', icon: 'M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6', page: 'op-purchase', color: 'blue' },
+                    { label: 'Update stock', sub: 'Adjust inventory levels', icon: 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z', page: 'op-inventory', color: 'amber' },
+                ].map(a => `<div class="card" style="cursor:pointer;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseleave="this.style.boxShadow='none'" onclick="nav('${a.page}')">
+      <div style="width:40px;height:40px;border-radius:10px;background:var(--${a.color === 'accent' ? 'accent-light' : a.color + '-bg'});display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--${a.color === 'accent' ? 'accent' : a.color})" stroke-width="2"><path d="${a.icon}"/></svg>
+      </div>
+      <div style="font-weight:600;font-size:15px">${a.label}</div>
+      <div style="font-size:12.5px;color:var(--text3);margin-top:3px">${a.sub}</div>
+    </div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="section-header"><h2>My recent transactions</h2></div>
+    ${transactionTableHTML(4)}
+  </div>`;
+        }
+
+        function renderOPSales(el) {
+            el.innerHTML = `
+  <div class="grid-half">
+    <div class="card">
+      <h2 style="margin-bottom:20px">New sale entry</h2>
+      <div class="form-grid">
+        <div class="form-group"><label>Customer name (optional)</label><input placeholder="Walk-in customer"></div>
+        <div class="form-group"><label>Sale date</label><input type="date" value="2026-05-26"></div>
+        <div class="form-group full"><label>Product</label>
+          <select><option>Nike Air Max 90 — ₹6,999 (3 in stock)</option><option>Samsung TV 43" — ₹38,000 (12 in stock)</option><option>Jeans Classic Fit — ₹1,299 (85 in stock)</option><option>Laptop Stand Pro — ₹1,999 (28 in stock)</option></select>
+        </div>
+        <div class="form-group"><label>Quantity</label><input type="number" value="1" min="1"></div>
+        <div class="form-group"><label>Unit price (₹)</label><input type="number" value="6999"></div>
+        <div class="form-group"><label>Discount (%)</label><input type="number" value="0" min="0" max="100"></div>
+        <div class="form-group"><label>Payment mode</label>
+          <select><option>Cash</option><option>UPI / QR</option><option>Card</option><option>Bank transfer</option></select>
+        </div>
+        <div class="form-group full"><label>Notes</label><input placeholder="Optional note…"></div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="nav('op-dashboard')">Cancel</button>
+          <button class="btn btn-primary" onclick="submitSale()">Save sale →</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid-col">
+      <div class="card card-sm" style="background:var(--accent-light);border-color:var(--accent)">
+        <div style="font-size:12px;color:var(--accent-text);font-weight:600;margin-bottom:8px">BILL PREVIEW</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--text2)">Product</span><span style="font-weight:500">Nike Air Max 90</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--text2)">Qty × Price</span><span>1 × ₹6,999</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--text2)">Discount</span><span>₹0</span></div>
+        <div style="border-top:1px solid var(--border2);margin:10px 0"></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-weight:600">Total</span><span style="font-size:20px;font-weight:700;color:var(--accent-text)">₹6,999</span></div>
+      </div>
+      <div class="card card-sm">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Today's sales</div>
+        ${txns.filter(t => t.tag === 'sale').slice(0, 3).map(t => `
+        <div class="activity-item">
+          <div class="activity-dot" style="background:var(--green)"></div>
+          <div><div style="font-size:13px;font-weight:500">${t.item}</div><div style="font-size:12px;color:var(--text3)">${t.amount} · ${t.time}</div></div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+        }
+
+        function submitSale() {
+            showToast('Sale saved successfully!', 'green');
+            nav('op-dashboard');
+        }
+
+        function renderOPExpense(el) {
+            el.innerHTML = `
+  <div style="max-width:560px">
+    <div class="card">
+      <h2 style="margin-bottom:20px">Add expense</h2>
+      <div class="form-grid">
+        <div class="form-group"><label>Category</label>
+          <select><option>Rent</option><option>Utilities</option><option>Salary</option><option>Marketing</option><option>Logistics</option><option>Maintenance</option><option>Other</option></select>
+        </div>
+        <div class="form-group"><label>Date</label><input type="date" value="2026-05-26"></div>
+        <div class="form-group full"><label>Description</label><input placeholder="e.g. Electricity bill — May 2026"></div>
+        <div class="form-group"><label>Amount (₹)</label><input type="number" placeholder="0.00"></div>
+        <div class="form-group"><label>Payment mode</label>
+          <select><option>Cash</option><option>Bank transfer</option><option>UPI</option><option>Card</option></select>
+        </div>
+        <div class="form-group full"><label>Receipt / note (optional)</label><input placeholder="Reference number or note"></div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="nav('op-dashboard')">Cancel</button>
+          <button class="btn btn-primary" onclick="showToast('Expense saved','green');nav('op-dashboard')">Save expense →</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+        }
+
+        function renderOPPurchase(el) {
+            el.innerHTML = `
+  <div style="max-width:560px">
+    <div class="card">
+      <h2 style="margin-bottom:20px">Record purchase</h2>
+      <div class="form-grid">
+        <div class="form-group full"><label>Supplier name</label><input placeholder="e.g. Samsung Distributor India"></div>
+        <div class="form-group full"><label>Product</label>
+          <select><option>Nike Air Max 90</option><option>Samsung TV 43"</option><option>Jeans Classic Fit</option><option>USB-C Hub 7-in-1</option><option>Laptop Stand Pro</option></select>
+        </div>
+        <div class="form-group"><label>Quantity</label><input type="number" value="10" min="1"></div>
+        <div class="form-group"><label>Unit cost (₹)</label><input type="number" placeholder="0.00"></div>
+        <div class="form-group"><label>Purchase date</label><input type="date" value="2026-05-26"></div>
+        <div class="form-group"><label>Invoice number</label><input placeholder="INV-XXXX"></div>
+        <div class="form-group full"><label>Notes</label><input placeholder="Optional remarks"></div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="nav('op-dashboard')">Cancel</button>
+          <button class="btn btn-primary" onclick="showToast('Purchase recorded & stock updated','green');nav('op-dashboard')">Save & update stock →</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+        }
+
+        function renderOPInventory(el) {
+            const items = [
+                { sku: 'SKU-001', name: 'Nike Air Max 90', qty: 3, status: 'low' },
+                { sku: 'SKU-002', name: 'Samsung TV 43"', qty: 12, status: 'ok' },
+                { sku: 'SKU-003', name: 'Jeans Classic Fit', qty: 85, status: 'ok' },
+                { sku: 'SKU-007', name: 'Bluetooth Speaker', qty: 2, status: 'out' },
+                { sku: 'SKU-005', name: 'Laptop Stand Pro', qty: 28, status: 'ok' },
+            ];
+            const st = { ok: 'badge-green', low: 'badge-amber', out: 'badge-red' };
+            const stl = { ok: 'In stock', low: 'Low stock', out: 'Out of stock' };
+            el.innerHTML = `
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Search products…" style="min-width:220px">
+    </div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>SKU</th><th>Product</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+    <tbody>${items.map(i => `<tr>
+      <td style="font-family:monospace;font-size:12px;color:var(--text3)">${i.sku}</td>
+      <td style="font-weight:500">${i.name}</td>
+      <td style="font-weight:600">${i.qty}</td>
+      <td><span class="badge ${st[i.status]}">${stl[i.status]}</span></td>
+      <td><button class="btn btn-secondary btn-sm" onclick="showToast('Stock updated','green')">Quick update</button></td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+        }
+
+        function renderOPHistory(el) {
+            el.innerHTML = `
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Search transactions…" style="min-width:220px">
+    </div>
+    <select style="width:auto;padding:8px 12px"><option>All types</option><option>Sales</option><option>Expenses</option><option>Purchases</option></select>
+    <input type="date" value="2026-05-26" style="width:auto">
+  </div>
+  ${transactionTableHTML()}`;
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // CHARTS
+        // ═══════════════════════════════════════════════════════
+        function baseOpts(prefix = '', yLabel = false) {
+            const textColor = darkMode ? '#8f8f9a' : '#6b6b74';
+            return {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => (prefix || '') + (typeof ctx.parsed.y === 'number' ? ctx.parsed.y.toLocaleString('en-IN') : ctx.parsed) } } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
+                    y: { grid: { color: darkMode ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)' }, ticks: { color: textColor, font: { size: 11 }, callback: v => prefix + v.toLocaleString('en-IN') } }
+                }
+            };
+        }
+
+        function initCharts(page) {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            const accent = 'rgba(79,70,229,';
+
+            if (page === 'sa-dashboard') {
+                const c1 = document.getElementById('sa-revenue-chart');
+                if (c1 && !charts['sa-rev']) {
+                    charts['sa-rev'] = new Chart(c1, {
+                        type: 'bar',
+                        data: {
+                            labels: months, datasets: [
+                                { label: 'Revenue', data: [560000, 620000, 710000, 680000, 790000, 840000], backgroundColor: accent + '0.75)', borderRadius: 4 },
+                                { label: 'MRR', data: [480000, 510000, 580000, 610000, 730000, 780000], backgroundColor: accent + '0.25)', borderRadius: 4 },
+                            ]
+                        },
+                        options: { ...baseOpts('₹', true), plugins: { legend: { display: true, labels: { color: darkMode ? '#f1f1f3' : '#111112', font: { size: 11 } } } } }
+                    });
+                }
+            }
+
+            if (page === 'ca-dashboard') {
+                const c2 = document.getElementById('ca-main-chart');
+                if (c2 && !charts['ca-main']) {
+                    charts['ca-main'] = new Chart(c2, {
+                        type: 'line',
+                        data: {
+                            labels: ['W1', 'W2', 'W3', 'W4'], datasets: [
+                                { label: 'Revenue', data: [6.2, 7.1, 5.8, 5.4], borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.1)', tension: .4, fill: true, pointRadius: 4 },
+                                { label: 'Expenses', data: [1.1, 0.9, 1.2, 1.0], borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,.08)', tension: .4, fill: true, pointRadius: 4 },
+                            ]
+                        },
+                        options: { ...baseOpts('₹', true), plugins: { legend: { display: true, labels: { color: darkMode ? '#f1f1f3' : '#111112', font: { size: 11 } } } } }
+                    });
+                }
+            }
+        }
+
+        function initReportCharts() {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
+            const accent = 'rgba(79,70,229,';
+            const c1 = document.getElementById('rpt-monthly');
+            if (c1 && !charts['rpt-monthly']) {
+                charts['rpt-monthly'] = new Chart(c1, {
+                    type: 'bar',
+                    data: {
+                        labels: months, datasets: [
+                            { label: 'Revenue', data: [18.2, 21.4, 19.8, 22.1, 24.5], backgroundColor: accent + '0.75)', borderRadius: 4 },
+                            { label: 'Expenses', data: [3.8, 4.1, 3.9, 4.0, 4.2], backgroundColor: 'rgba(220,38,38,.55)', borderRadius: 4 },
+                            { label: 'Profit', data: [7.2, 8.4, 7.6, 8.8, 6.8], backgroundColor: 'rgba(22,163,74,.55)', borderRadius: 4 },
+                        ]
+                    },
+                    options: { ...baseOpts('₹L', true), plugins: { legend: { display: true, labels: { color: darkMode ? '#f1f1f3' : '#111112', font: { size: 11 } } } } }
+                });
+            }
+            const c2 = document.getElementById('rpt-expense-pie');
+            if (c2 && !charts['rpt-exp-pie']) {
+                charts['rpt-exp-pie'] = new Chart(c2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Rent', 'Salaries', 'Utilities', 'Marketing', 'Logistics', 'Other'],
+                        datasets: [{ data: [45000, 180000, 12800, 25000, 8400, 10000], backgroundColor: ['#6366f1', '#22c55e', '#f59e0b', '#3b82f6', '#ec4899', '#94a3b8'], borderWidth: 0 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right', labels: { color: darkMode ? '#f1f1f3' : '#111112', font: { size: 11 }, boxWidth: 12 } } } }
+                });
+            }
+            const c3 = document.getElementById('plan-chart');
+            if (c3 && !charts['plan-dist']) {
+                charts['plan-dist'] = new Chart(c3, {
+                    type: 'pie',
+                    data: { labels: ['Starter (38)', 'Pro (62)', 'Enterprise (32)'], datasets: [{ data: [38, 62, 32], backgroundColor: ['#94a3b8', '#4f46e5', '#22c55e'], borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'right', labels: { color: darkMode ? '#f1f1f3' : '#111112', font: { size: 11 }, boxWidth: 12 } } } }
+                });
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // MODALS
+        // ═══════════════════════════════════════════════════════
+        function openModal() {
+            const modals = {
+                'sa-companies': openAddCompanyModal,
+                'ca-inventory': openAddProductModal,
+                'op-inventory': openAddProductModal,
+            };
+            if (modals[currentPage]) modals[currentPage]();
+        }
+
+        function openAddCompanyModal() {
+            document.getElementById('modal-title').textContent = 'Add company';
+            document.getElementById('modal-body').innerHTML = `
+  <div class="form-grid">
+    <div class="form-group full"><label>Company name</label><input placeholder="Acme Corp"></div>
+    <div class="form-group"><label>Admin email</label><input type="email" placeholder="admin@company.com"></div>
+    <div class="form-group"><label>Admin name</label><input placeholder="Full name"></div>
+    <div class="form-group"><label>Plan</label><select><option>Starter</option><option>Pro</option><option>Enterprise</option></select></div>
+    <div class="form-group"><label>Initial password</label><input type="password" placeholder="Set a password"></div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="showToast('Company created!','green');closeModal()">Create company →</button>
+    </div>
+  </div>`;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function openAddProductModal() {
+            document.getElementById('modal-title').textContent = 'Add product';
+            document.getElementById('modal-body').innerHTML = `
+  <div class="form-grid">
+    <div class="form-group full"><label>Product name</label><input placeholder="e.g. Nike Air Max 90"></div>
+    <div class="form-group"><label>SKU</label><input placeholder="SKU-XXX"></div>
+    <div class="form-group"><label>Category</label><select><option>Footwear</option><option>Electronics</option><option>Apparel</option><option>Accessories</option></select></div>
+    <div class="form-group"><label>Initial stock</label><input type="number" value="0"></div>
+    <div class="form-group"><label>Min stock level</label><input type="number" value="10"></div>
+    <div class="form-group"><label>Buy price (₹)</label><input type="number" placeholder="0.00"></div>
+    <div class="form-group"><label>Sell price (₹)</label><input type="number" placeholder="0.00"></div>
+    <div class="form-group full"><label>Description</label><input placeholder="Optional description"></div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="showToast('Product added to inventory','green');closeModal()">Add product →</button>
+    </div>
+  </div>`;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        // ═══════════════════════════════════════════════════════
+        // UI HELPERS
+        // ═══════════════════════════════════════════════════════
+        function toggleTheme() {
+            darkMode = !darkMode;
+            document.body.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+            const sunPath = 'M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42';
+            const moonPath = 'M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z';
+            const makeSvg = filled => filled
+                ? `<path d="${moonPath}" fill="none" stroke="currentColor" stroke-width="2"/>`
+                : `<circle cx="12" cy="12" r="5"/><path d="${sunPath}" fill="none" stroke="currentColor" stroke-width="2"/>`;
+            ['theme-icon', 'theme-icon2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = makeSvg(darkMode);
+            });
+            if (currentPage) nav(currentPage);
+        }
+
+        function toggleNotifPanel() {
+            notifOpen = !notifOpen;
+            document.getElementById('notif-panel').style.display = notifOpen ? 'block' : 'none';
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+        }
+
+        function showToast(msg, type = 'green') {
+            const t = document.createElement('div');
+            t.style.cssText = `position:fixed;bottom:24px;right:24px;background:var(--${type === 'green' ? 'green-bg' : 'red-bg'});color:var(--${type === 'green' ? 'green-text' : 'red-text'});border:1px solid var(--${type === 'green' ? 'green' : 'red'});padding:10px 18px;border-radius:8px;font-size:13.5px;font-weight:500;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.12)`;
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        document.addEventListener('click', e => {
+            if (notifOpen && !e.target.closest('#notif-panel') && !e.target.closest('[onclick*="toggleNotifPanel"]')) {
+                notifOpen = false;
+                document.getElementById('notif-panel').style.display = 'none';
+            }
+        });
+
+        filterTable = (q) => {
+            document.querySelectorAll('#companies-table tbody tr').forEach(r => {
+                r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+            });
+        };
+        filterByPlan = (plan) => {
+            document.querySelectorAll('#companies-table tbody tr').forEach(r => {
+                r.style.display = (!plan || r.textContent.includes(plan)) ? '' : 'none';
+            });
+        };
+    </script>
+</body>
+
+</html>
