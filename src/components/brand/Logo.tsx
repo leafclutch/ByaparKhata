@@ -41,7 +41,7 @@ export function Logo({ size = "md", showText = true, className }: LogoProps) {
       {showText && (
         <div>
           <div className={cn("font-bold text-slate-900 leading-tight tracking-tight", textClass)}>
-            VyaparKhata
+            ByaparKhata
           </div>
           <div className={cn("text-slate-400 leading-tight", subClass)}>
             by Leafclutch Technologies

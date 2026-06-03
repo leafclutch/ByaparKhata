@@ -7,10 +7,11 @@ import { Printer, ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getSaleWithItems } from "@/lib/services/sales";
-import { DEMO_SALES, DEMO_COMPANY } from "@/lib/mock-data";
+import { getCompany } from "@/lib/services/company";
+import { useAuth } from "@/hooks/useAuth";
 import { getInitials } from "@/lib/utils";
 import { formatINR, formatDateTime, PAYMENT_METHOD_LABELS } from "@/lib/utils";
-import type { Sale } from "@/lib/types";
+import type { Sale, Company } from "@/lib/types";
 
 function BillingContent() {
   const params = useSearchParams();
@@ -18,15 +19,40 @@ function BillingContent() {
   const invoiceParam = params.get("invoice");
   const totalParam = params.get("total");
 
+  const { user } = useAuth();
   const [sale, setSale] = useState<Sale | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
 
   useEffect(() => {
+    if (!user) return;
+    getCompany(user.company_id).then(setCompany).catch(() => {});
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
     if (saleIdParam) {
       getSaleWithItems(saleIdParam).then(setSale);
-    } else {
-      setSale(DEMO_SALES[0]);
     }
-  }, [saleIdParam]);
+  }, [saleIdParam, user]);
+
+  if (!sale && !invoiceParam) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center gap-3 no-print">
+          <Link href="/operator/sales">
+            <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Sales
+            </Button>
+          </Link>
+          <div className="flex-1">
+            <h2 className="text-lg font-bold text-slate-900">Billing & Invoice</h2>
+            <p className="text-sm text-slate-500 mt-0.5">Preview and print invoice</p>
+          </div>
+        </div>
+        <div className="text-sm text-slate-400 p-8 text-center">Select a sale to view its invoice.</div>
+      </div>
+    );
+  }
 
   if (!sale) {
     return <div className="text-sm text-slate-400 p-8">Loading invoice…</div>;
@@ -63,18 +89,18 @@ function BillingContent() {
         {/* Header */}
         <div className="flex items-start justify-between pb-6 border-b border-slate-100">
           <div>
-            {DEMO_COMPANY.logo_url ? (
-              <img src={DEMO_COMPANY.logo_url} alt={DEMO_COMPANY.name} className="h-10 object-contain" />
+            {company?.logo_url ? (
+              <img src={company.logo_url} alt={company.name} className="h-10 object-contain" />
             ) : (
               <div className="h-10 w-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-bold text-sm">
-                {getInitials(DEMO_COMPANY.name)}
+                {getInitials(company?.name ?? "?")}
               </div>
             )}
             <div className="mt-3 text-xs text-slate-500 space-y-0.5">
-              <p className="font-bold text-base text-slate-900">{DEMO_COMPANY.name}</p>
-              {DEMO_COMPANY.address && <p>{DEMO_COMPANY.address}</p>}
-              {DEMO_COMPANY.gst_number && <p>GST: {DEMO_COMPANY.gst_number}</p>}
-              {DEMO_COMPANY.contact_email && <p>{DEMO_COMPANY.contact_email}</p>}
+              <p className="font-bold text-base text-slate-900">{company?.name ?? "—"}</p>
+              {company?.address && <p>{company.address}</p>}
+              {company?.gst_number && <p>PAN/VAT: {company.gst_number}</p>}
+              {company?.contact_email && <p>{company.contact_email}</p>}
             </div>
           </div>
           <div className="text-right">
@@ -128,7 +154,7 @@ function BillingContent() {
           <div className="w-56 space-y-1.5 text-sm">
             <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>{formatINR(sale.subtotal)}</span></div>
             {sale.discount > 0 && <div className="flex justify-between text-rose-600"><span>Discount</span><span>−{formatINR(sale.discount)}</span></div>}
-            <div className="flex justify-between text-slate-600"><span>GST ({sale.tax_rate}%)</span><span>{formatINR(sale.tax_amount)}</span></div>
+            <div className="flex justify-between text-slate-600"><span>Tax ({sale.tax_rate}%)</span><span>{formatINR(sale.tax_amount)}</span></div>
             <div className="flex justify-between font-bold text-base text-slate-900 pt-2 border-t border-slate-200">
               <span>Grand Total</span>
               <span className="text-brand-700">{formatINR(sale.grand_total)}</span>
@@ -139,7 +165,7 @@ function BillingContent() {
         {/* Footer */}
         <div className="mt-8 pt-4 border-t border-slate-100 text-center">
           <p className="text-xs text-slate-400">Thank you for your business!</p>
-          <p className="text-[10px] text-slate-300 mt-1">Powered by VyaparKhata</p>
+          <p className="text-[10px] text-slate-300 mt-1">Powered by ByaparKhata</p>
         </div>
       </motion.div>
     </div>

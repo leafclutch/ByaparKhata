@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Download, Filter } from "lucide-react";
+import { Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { DEMO_SALES, DEMO_PURCHASES, DEMO_EXPENSES, DEMO_PRODUCTS } from "@/lib/mock-data";
-import { formatINR, formatDate, getStockStatus, EXPENSE_CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { getSales } from "@/lib/services/sales";
+import { getPurchases } from "@/lib/services/purchases";
+import { getExpenses } from "@/lib/services/expenses";
+import { getProducts } from "@/lib/services/products";
+import { formatINR, formatDate, getStockStatus } from "@/lib/utils";
 import type { Sale, Purchase, Expense, Product } from "@/lib/types";
 
 const salesColumns = [
@@ -46,14 +49,23 @@ const inventoryColumns = [
   { key: "quantity", header: "Stock", render: (r: Product) => <span className="text-sm text-slate-700">{r.quantity} units</span> },
   { key: "status", header: "Status", render: (r: Product) => <StatusBadge status={getStockStatus(r.quantity, r.min_stock)} /> },
   { key: "selling_price", header: "Sell Price", render: (r: Product) => <span className="text-sm text-slate-700">{formatINR(r.selling_price)}</span> },
-  {
-    key: "value", header: "Stock Value",
-    render: (r: Product) => <span className="text-sm font-semibold text-slate-800">{formatINR(r.quantity * r.purchase_price)}</span>,
-  },
+  { key: "value", header: "Stock Value", render: (r: Product) => <span className="text-sm font-semibold text-slate-800">{formatINR(r.quantity * r.purchase_price)}</span> },
 ];
 
 export default function ReportsPage() {
-  const [period, setPeriod] = useState("may-2026");
+  const { user } = useAuth();
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const cid = user.company_id;
+    Promise.all([getSales(cid), getPurchases(cid), getExpenses(cid), getProducts(cid)])
+      .then(([s, p, e, pr]) => { setSales(s); setPurchases(p); setExpenses(e); setProducts(pr); })
+      .catch(() => {});
+  }, [user]);
 
   return (
     <div className="space-y-6">
@@ -62,22 +74,10 @@ export default function ReportsPage() {
           <h2 className="text-lg font-bold text-slate-900">Reports</h2>
           <p className="text-sm text-slate-500 mt-0.5">View detailed transaction reports by category</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="h-9 w-36 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="may-2026">May 2026</SelectItem>
-              <SelectItem value="apr-2026">Apr 2026</SelectItem>
-              <SelectItem value="mar-2026">Mar 2026</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
-            <Download className="w-3.5 h-3.5" />
-            Export
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
+          <Download className="w-3.5 h-3.5" />
+          Export
+        </Button>
       </div>
 
       <motion.div
@@ -94,7 +94,7 @@ export default function ReportsPage() {
                   value={t}
                   className="capitalize text-sm px-4 py-2 data-[state=active]:bg-brand-50 data-[state=active]:text-brand-700 data-[state=active]:shadow-none rounded-t-lg"
                 >
-                  {t === "inventory" ? "Inventory" : t.charAt(0).toUpperCase() + t.slice(1)}
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -102,42 +102,42 @@ export default function ReportsPage() {
 
           <TabsContent value="sales" className="m-0">
             <div className="px-5 py-3 border-b border-slate-50 flex items-center justify-between">
-              <span className="text-xs text-slate-500">{DEMO_SALES.length} records</span>
+              <span className="text-xs text-slate-500">{sales.length} records</span>
               <span className="text-xs font-semibold text-emerald-700">
-                Total: {formatINR(DEMO_SALES.reduce((s, r) => s + r.grand_total, 0))}
+                Total: {formatINR(sales.reduce((s, r) => s + r.grand_total, 0))}
               </span>
             </div>
-            <DataTable columns={salesColumns} data={DEMO_SALES} rowKey="id" searchable searchKeys={["customer_name", "invoice_number"]} />
+            <DataTable columns={salesColumns} data={sales} rowKey="id" searchable searchKeys={["customer_name", "invoice_number"]} />
           </TabsContent>
 
           <TabsContent value="purchases" className="m-0">
             <div className="px-5 py-3 border-b border-slate-50 flex items-center justify-between">
-              <span className="text-xs text-slate-500">{DEMO_PURCHASES.length} records</span>
+              <span className="text-xs text-slate-500">{purchases.length} records</span>
               <span className="text-xs font-semibold text-rose-700">
-                Total: {formatINR(DEMO_PURCHASES.reduce((s, r) => s + r.total_cost, 0))}
+                Total: {formatINR(purchases.reduce((s, r) => s + r.total_cost, 0))}
               </span>
             </div>
-            <DataTable columns={purchaseColumns} data={DEMO_PURCHASES} rowKey="id" searchable searchKeys={["supplier_name", "product_name"]} />
+            <DataTable columns={purchaseColumns} data={purchases} rowKey="id" searchable searchKeys={["supplier_name", "product_name"]} />
           </TabsContent>
 
           <TabsContent value="expenses" className="m-0">
             <div className="px-5 py-3 border-b border-slate-50 flex items-center justify-between">
-              <span className="text-xs text-slate-500">{DEMO_EXPENSES.length} records</span>
+              <span className="text-xs text-slate-500">{expenses.length} records</span>
               <span className="text-xs font-semibold text-rose-700">
-                Total: {formatINR(DEMO_EXPENSES.reduce((s, r) => s + r.amount, 0))}
+                Total: {formatINR(expenses.reduce((s, r) => s + r.amount, 0))}
               </span>
             </div>
-            <DataTable columns={expenseColumns} data={DEMO_EXPENSES} rowKey="id" searchable searchKeys={["description"]} />
+            <DataTable columns={expenseColumns} data={expenses} rowKey="id" searchable searchKeys={["description"]} />
           </TabsContent>
 
           <TabsContent value="inventory" className="m-0">
             <div className="px-5 py-3 border-b border-slate-50 flex items-center justify-between">
-              <span className="text-xs text-slate-500">{DEMO_PRODUCTS.length} products</span>
+              <span className="text-xs text-slate-500">{products.length} products</span>
               <span className="text-xs font-semibold text-slate-700">
-                Total value: {formatINR(DEMO_PRODUCTS.reduce((s, r) => s + r.quantity * r.purchase_price, 0))}
+                Total value: {formatINR(products.reduce((s, r) => s + r.quantity * r.purchase_price, 0))}
               </span>
             </div>
-            <DataTable columns={inventoryColumns} data={DEMO_PRODUCTS} rowKey="id" searchable searchKeys={["name", "sku"]} />
+            <DataTable columns={inventoryColumns} data={products} rowKey="id" searchable searchKeys={["name", "sku"]} />
           </TabsContent>
         </Tabs>
       </motion.div>

@@ -190,7 +190,10 @@ export async function resetUserPassword(userId: string, newPassword: string): Pr
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password: newPassword }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(body.error ?? "Unknown error");
+  }
 }
 
 // ─── Platform stats ───────────────────────────────────────────────────────────

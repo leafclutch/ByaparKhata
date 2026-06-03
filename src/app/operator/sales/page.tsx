@@ -182,7 +182,7 @@ export default function SalesPage() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>{formatINR(totals.subtotal)}</span></div>
               <div className="flex justify-between text-slate-600"><span>Discount</span><span className="text-rose-600">−{formatINR(totals.totalDiscount)}</span></div>
-              <div className="flex justify-between text-slate-600"><span>GST (18%)</span><span>{formatINR(totals.taxAmount)}</span></div>
+              <div className="flex justify-between text-slate-600"><span>Tax (18%)</span><span>{formatINR(totals.taxAmount)}</span></div>
               <div className="flex justify-between font-bold text-base text-slate-900 pt-2 border-t border-slate-100">
                 <span>Grand Total</span>
                 <span className="text-brand-700">{formatINR(totals.grandTotal)}</span>

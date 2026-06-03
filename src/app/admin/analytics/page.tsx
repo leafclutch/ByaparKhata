@@ -1,21 +1,17 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { RevenueAreaChart } from "@/components/charts/RevenueAreaChart";
 import { SalesBarChart } from "@/components/charts/SalesBarChart";
 import { InventoryChart } from "@/components/charts/InventoryChart";
 import { DataTable } from "@/components/shared/DataTable";
-import {
-  DEMO_MONTHLY_DATA, DEMO_TOP_PRODUCTS, DEMO_OPERATOR, DEMO_OPERATOR_2,
-  DEMO_SALES,
-} from "@/lib/mock-data";
+import { useAuth } from "@/hooks/useAuth";
+import { getMonthlyRevenue, getTopProducts } from "@/lib/services/analytics";
+import { getSales } from "@/lib/services/sales";
+import { getCompanyTeam } from "@/lib/services/company";
 import { formatINR, formatDate } from "@/lib/utils";
-import type { ProductStat } from "@/lib/types";
-
-const operatorStats = [
-  { operator: DEMO_OPERATOR, sales_count: 5, total_revenue: 47913.12, last_active: "2026-05-26T14:30:00Z" },
-  { operator: DEMO_OPERATOR_2, sales_count: 3, total_revenue: 56754.82, last_active: "2026-05-25T16:45:00Z" },
-];
+import type { MonthlyData, ProductStat, AppUser, Sale } from "@/lib/types";
 
 const topProductColumns = [
   {
@@ -43,6 +39,39 @@ const topProductColumns = [
 ];
 
 export default function AnalyticsPage() {
+  const { user } = useAuth();
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [topProducts, setTopProducts] = useState<ProductStat[]>([]);
+  const [team, setTeam] = useState<AppUser[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const cid = user.company_id;
+    Promise.all([
+      getMonthlyRevenue(cid, 6),
+      getTopProducts(cid, 5),
+      getCompanyTeam(cid),
+      getSales(cid),
+    ])
+      .then(([m, tp, t, s]) => { setMonthlyData(m); setTopProducts(tp); setTeam(t); setSales(s); })
+      .catch(() => {});
+  }, [user]);
+
+  const operatorStats = team
+    .filter((u) => u.role === "operator")
+    .map((op) => {
+      const opSales = sales.filter((s) => s.operator_id === op.id);
+      const lastSale = opSales[0];
+      return {
+        operator: op,
+        sales_count: opSales.length,
+        total_revenue: opSales.reduce((s, r) => s + r.grand_total, 0),
+        last_active: lastSale?.created_at ?? op.created_at,
+      };
+    })
+    .sort((a, b) => b.total_revenue - a.total_revenue);
+
   return (
     <div className="space-y-6">
       <div>
@@ -50,7 +79,6 @@ export default function AnalyticsPage() {
         <p className="text-sm text-slate-500 mt-0.5">Deep-dive into your business performance metrics</p>
       </div>
 
-      {/* Revenue trend */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -58,10 +86,9 @@ export default function AnalyticsPage() {
       >
         <h3 className="text-sm font-semibold text-slate-800 mb-1">Revenue Trend</h3>
         <p className="text-xs text-slate-400 mb-4">Sales, purchases, expenses and profit — last 6 months</p>
-        <RevenueAreaChart data={DEMO_MONTHLY_DATA} height={260} />
+        <RevenueAreaChart data={monthlyData} height={260} />
       </motion.div>
 
-      {/* Bar chart + operator performance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -71,7 +98,7 @@ export default function AnalyticsPage() {
         >
           <h3 className="text-sm font-semibold text-slate-800 mb-1">Monthly Comparison</h3>
           <p className="text-xs text-slate-400 mb-4">Sales vs Purchases vs Expenses</p>
-          <SalesBarChart data={DEMO_MONTHLY_DATA} height={220} />
+          <SalesBarChart data={monthlyData} height={220} />
         </motion.div>
 
         <motion.div
@@ -82,27 +109,30 @@ export default function AnalyticsPage() {
         >
           <h3 className="text-sm font-semibold text-slate-800 mb-1">Operator Performance</h3>
           <p className="text-xs text-slate-400 mb-4">Sales activity by team members</p>
-          <div className="space-y-3 mt-4">
-            {operatorStats.map((stat) => (
-              <div key={stat.operator.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  {stat.operator.full_name.split(" ").map((n) => n[0]).join("")}
+          {operatorStats.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">No operator data yet</p>
+          ) : (
+            <div className="space-y-3 mt-4">
+              {operatorStats.map((stat) => (
+                <div key={stat.operator.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                  <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    {stat.operator.full_name.split(" ").map((n) => n[0]).join("")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800">{stat.operator.full_name}</p>
+                    <p className="text-xs text-slate-400">{stat.sales_count} sales · Last active {formatDate(stat.last_active)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-700">{formatINR(stat.total_revenue)}</p>
+                    <p className="text-xs text-slate-400">revenue</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800">{stat.operator.full_name}</p>
-                  <p className="text-xs text-slate-400">{stat.sales_count} sales · Last active {formatDate(stat.last_active)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-emerald-700">{formatINR(stat.total_revenue)}</p>
-                  <p className="text-xs text-slate-400">revenue</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
 
-      {/* Top products + inventory chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -113,7 +143,7 @@ export default function AnalyticsPage() {
           <div className="px-5 py-4 border-b border-slate-50">
             <h3 className="text-sm font-semibold text-slate-800">Top Selling Products</h3>
           </div>
-          <DataTable columns={topProductColumns} data={DEMO_TOP_PRODUCTS} rowKey="id" />
+          <DataTable columns={topProductColumns} data={topProducts} rowKey="id" />
         </motion.div>
 
         <motion.div
@@ -124,7 +154,7 @@ export default function AnalyticsPage() {
         >
           <h3 className="text-sm font-semibold text-slate-800 mb-1">Revenue by Product</h3>
           <p className="text-xs text-slate-400 mb-4">Top 5 products this month</p>
-          <InventoryChart data={DEMO_TOP_PRODUCTS} height={240} />
+          <InventoryChart data={topProducts} height={240} />
         </motion.div>
       </div>
     </div>

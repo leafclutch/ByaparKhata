@@ -6,7 +6,7 @@ import type {
 export const SA_PROFILE: SuperadminProfile = {
   id: "sa-001",
   full_name: "Roshan Singh",
-  email: "admin@vyaparkhata.com",
+  email: "admin@byaparkhata.com",
   contact_number: "+91 98765 43210",
   created_at: "2025-01-01T00:00:00Z",
 };

@@ -1,28 +1,44 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, ArrowUpRight } from "lucide-react";
 import { RevenueAreaChart } from "@/components/charts/RevenueAreaChart";
 import { SalesBarChart } from "@/components/charts/SalesBarChart";
-import { DEMO_MONTHLY_DATA, DEMO_KPIS } from "@/lib/mock-data";
+import { useAuth } from "@/hooks/useAuth";
+import { getDashboardKPIs, getMonthlyRevenue } from "@/lib/services/analytics";
 import { formatINR, formatINRCompact } from "@/lib/utils";
-
-const monthlyTotals = DEMO_MONTHLY_DATA.map((m) => ({
-  ...m,
-  growth: 0,
-})).map((m, i, arr) => ({
-  ...m,
-  growth: i === 0 ? 0 : Math.round(((m.sales - arr[i - 1].sales) / arr[i - 1].sales) * 100),
-}));
-
-const summaryCards = [
-  { label: "Total Revenue (MTD)", value: DEMO_KPIS.total_sales, change: DEMO_KPIS.sales_change, color: "emerald" },
-  { label: "Avg Monthly Revenue", value: Math.round(DEMO_MONTHLY_DATA.reduce((s, m) => s + m.sales, 0) / DEMO_MONTHLY_DATA.length), change: null, color: "blue" },
-  { label: "Best Month", value: Math.max(...DEMO_MONTHLY_DATA.map((m) => m.sales)), change: null, color: "violet" },
-  { label: "YTD Revenue", value: DEMO_MONTHLY_DATA.reduce((s, m) => s + m.sales, 0), change: null, color: "indigo" },
-];
+import type { DashboardKPIs, MonthlyData } from "@/lib/types";
 
 export default function RevenuePage() {
+  const { user } = useAuth();
+  const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const cid = user.company_id;
+    Promise.all([getDashboardKPIs(cid), getMonthlyRevenue(cid, 6)])
+      .then(([k, m]) => { setKpis(k); setMonthlyData(m); })
+      .catch(() => {});
+  }, [user]);
+
+  const monthlyTotals = monthlyData.map((m, i, arr) => ({
+    ...m,
+    growth: i === 0 ? 0 : Math.round(((m.sales - arr[i - 1].sales) / (arr[i - 1].sales || 1)) * 100),
+  }));
+
+  const avgMonthly = monthlyData.length ? Math.round(monthlyData.reduce((s, m) => s + m.sales, 0) / monthlyData.length) : 0;
+  const bestMonth = monthlyData.length ? Math.max(...monthlyData.map((m) => m.sales)) : 0;
+  const ytd = monthlyData.reduce((s, m) => s + m.sales, 0);
+
+  const summaryCards = [
+    { label: "Total Revenue (MTD)", value: kpis?.total_sales ?? 0, change: kpis?.sales_change ?? null, color: "emerald" },
+    { label: "Avg Monthly Revenue", value: avgMonthly, change: null, color: "blue" },
+    { label: "Best Month", value: bestMonth, change: null, color: "violet" },
+    { label: "YTD Revenue", value: ytd, change: null, color: "indigo" },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -30,7 +46,6 @@ export default function RevenuePage() {
         <p className="text-sm text-slate-500 mt-0.5">Detailed revenue analysis and trends</p>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {summaryCards.map((card, i) => (
           <motion.div
@@ -42,7 +57,7 @@ export default function RevenuePage() {
           >
             <p className="text-xs text-slate-500 mb-2">{card.label}</p>
             <p className="text-xl font-bold text-slate-900">{formatINRCompact(card.value)}</p>
-            {card.change !== null && (
+            {card.change !== null && card.change !== 0 && (
               <div className="flex items-center gap-1 mt-1.5">
                 <ArrowUpRight className="w-3 h-3 text-emerald-600" />
                 <span className="text-xs font-medium text-emerald-700">+{card.change}% vs last month</span>
@@ -52,7 +67,6 @@ export default function RevenuePage() {
         ))}
       </div>
 
-      {/* Revenue chart */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -62,17 +76,18 @@ export default function RevenuePage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-semibold text-slate-800">Revenue Trend</h3>
-            <p className="text-xs text-slate-400">Monthly sales revenue — Dec 2025 to May 2026</p>
+            <p className="text-xs text-slate-400">Monthly sales revenue — last 6 months</p>
           </div>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
-            <TrendingUp className="w-3.5 h-3.5" />
-            +{DEMO_KPIS.sales_change}% growth
-          </div>
+          {kpis && kpis.sales_change !== 0 && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
+              <TrendingUp className="w-3.5 h-3.5" />
+              +{kpis.sales_change}% growth
+            </div>
+          )}
         </div>
-        <RevenueAreaChart data={DEMO_MONTHLY_DATA} height={280} />
+        <RevenueAreaChart data={monthlyData} height={280} />
       </motion.div>
 
-      {/* Monthly bar chart */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -81,10 +96,9 @@ export default function RevenuePage() {
       >
         <h3 className="text-sm font-semibold text-slate-800 mb-1">Monthly Breakdown</h3>
         <p className="text-xs text-slate-400 mb-4">Sales vs Purchases vs Expenses</p>
-        <SalesBarChart data={DEMO_MONTHLY_DATA} height={260} />
+        <SalesBarChart data={monthlyData} height={260} />
       </motion.div>
 
-      {/* Monthly table */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -109,7 +123,7 @@ export default function RevenuePage() {
             <tbody className="divide-y divide-slate-50">
               {monthlyTotals.map((row) => (
                 <tr key={row.month} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-5 py-3 font-medium text-slate-800">{row.month} 2026</td>
+                  <td className="px-5 py-3 font-medium text-slate-800">{row.month}</td>
                   <td className="px-5 py-3 text-right text-emerald-700 font-semibold">{formatINR(row.sales)}</td>
                   <td className="px-5 py-3 text-right text-rose-600">{formatINR(row.purchases)}</td>
                   <td className="px-5 py-3 text-right text-amber-600">{formatINR(row.expenses)}</td>
@@ -125,6 +139,9 @@ export default function RevenuePage() {
                   </td>
                 </tr>
               ))}
+              {monthlyTotals.length === 0 && (
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-400">No data yet</td></tr>
+              )}
             </tbody>
           </table>
         </div>

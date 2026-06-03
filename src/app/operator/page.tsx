@@ -1,16 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ShoppingCart, PackageSearch, DollarSign, Package, AlertTriangle, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { DEMO_SALES, DEMO_PURCHASES, DEMO_EXPENSES, DEMO_PRODUCTS, DEMO_OPERATOR } from "@/lib/mock-data";
+import { useAuth } from "@/hooks/useAuth";
+import { getSales } from "@/lib/services/sales";
+import { getPurchases } from "@/lib/services/purchases";
+import { getExpenses } from "@/lib/services/expenses";
+import { getProducts } from "@/lib/services/products";
 import { formatINR, formatDate, getStockStatus } from "@/lib/utils";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import type { Sale } from "@/lib/types";
-
-const todaySales = DEMO_SALES.filter((s) => s.operator_id === DEMO_OPERATOR.id);
-const totalRevenue = todaySales.reduce((s, r) => s + r.grand_total, 0);
-const lowStockProducts = DEMO_PRODUCTS.filter((p) => getStockStatus(p.quantity, p.min_stock) !== "ok");
+import type { Sale, Purchase, Expense, Product } from "@/lib/types";
 
 const quickActions = [
   { href: "/operator/sales", icon: ShoppingCart, label: "New Sale", desc: "Record a sale transaction", color: "bg-brand-600 hover:bg-brand-700 text-white" },
@@ -20,18 +21,34 @@ const quickActions = [
 ];
 
 export default function OperatorDashboardPage() {
+  const { user } = useAuth();
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const cid = user.company_id;
+    Promise.all([getSales(cid), getPurchases(cid), getExpenses(cid), getProducts(cid)])
+      .then(([s, p, e, pr]) => { setSales(s); setPurchases(p); setExpenses(e); setProducts(pr); })
+      .catch(() => {});
+  }, [user]);
+
+  const mySales = sales.filter((s) => s.operator_id === user?.id);
+  const totalRevenue = mySales.reduce((s, r) => s + r.grand_total, 0);
+  const lowStockProducts = products.filter((p) => getStockStatus(p.quantity, p.min_stock) !== "ok");
+  const firstName = user?.full_name?.split(" ")[0] ?? "there";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+
   return (
     <div className="space-y-6">
-      {/* Greeting */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
-        <h2 className="text-lg font-bold text-slate-900">
-          Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"},{" "}
-          {DEMO_OPERATOR.full_name.split(" ")[0]} 👋
-        </h2>
+        <h2 className="text-lg font-bold text-slate-900">Good {greeting}, {firstName}</h2>
         <p className="text-sm text-slate-500 mt-0.5">Here's a summary of today's activity</p>
       </motion.div>
 
-      {/* Low stock alert */}
       {lowStockProducts.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -44,17 +61,16 @@ export default function OperatorDashboardPage() {
             <span className="font-semibold">{lowStockProducts.length} items</span> are low on stock — {lowStockProducts.map((p) => p.name).join(", ")}
           </span>
           <Link href="/operator/inventory" className="text-amber-700 font-medium hover:underline flex-shrink-0">
-            View →
+            View
           </Link>
         </motion.div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "My Sales Today", value: formatINR(totalRevenue), sub: `${todaySales.length} transactions`, color: "emerald" },
-          { label: "Purchases (MTD)", value: formatINR(DEMO_PURCHASES.reduce((s, r) => s + r.total_cost, 0)), sub: `${DEMO_PURCHASES.length} purchase orders`, color: "cyan" },
-          { label: "Expenses (MTD)", value: formatINR(DEMO_EXPENSES.reduce((s, r) => s + r.amount, 0)), sub: `${DEMO_EXPENSES.length} records`, color: "amber" },
+          { label: "My Sales Today", value: formatINR(totalRevenue), sub: `${mySales.length} transactions`, color: "emerald" },
+          { label: "Purchases (MTD)", value: formatINR(purchases.reduce((s, r) => s + r.total_cost, 0)), sub: `${purchases.length} purchase orders`, color: "cyan" },
+          { label: "Expenses (MTD)", value: formatINR(expenses.reduce((s, r) => s + r.amount, 0)), sub: `${expenses.length} records`, color: "amber" },
           { label: "Low Stock Items", value: String(lowStockProducts.length), sub: "need restocking", color: lowStockProducts.length > 0 ? "rose" : "emerald" },
         ].map((stat, i) => (
           <motion.div
@@ -71,7 +87,6 @@ export default function OperatorDashboardPage() {
         ))}
       </div>
 
-      {/* Quick actions */}
       <div>
         <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -98,7 +113,6 @@ export default function OperatorDashboardPage() {
         </div>
       </div>
 
-      {/* Recent sales */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -111,23 +125,30 @@ export default function OperatorDashboardPage() {
             View all
           </Link>
         </div>
-        <div className="divide-y divide-slate-50">
-          {DEMO_SALES.slice(0, 5).map((sale) => (
-            <div key={sale.id} className="flex items-center gap-3 px-5 py-3">
-              <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
-                <ShoppingCart className="w-4 h-4 text-brand-600" />
+        {mySales.length === 0 ? (
+          <div className="py-10 text-center">
+            <ShoppingCart className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+            <p className="text-sm text-slate-400">No sales recorded yet</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {mySales.slice(0, 5).map((sale) => (
+              <div key={sale.id} className="flex items-center gap-3 px-5 py-3">
+                <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
+                  <ShoppingCart className="w-4 h-4 text-brand-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">{sale.customer_name || "Walk-in"}</p>
+                  <p className="text-xs text-slate-400">{sale.invoice_number} · {formatDate(sale.created_at)}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold text-emerald-700">{formatINR(sale.grand_total)}</p>
+                  <StatusBadge status={sale.payment_method} />
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{sale.customer_name || "Walk-in"}</p>
-                <p className="text-xs text-slate-400">{sale.invoice_number} · {formatDate(sale.created_at)}</p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-bold text-emerald-700">{formatINR(sale.grand_total)}</p>
-                <StatusBadge status={sale.payment_method} />
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </motion.div>
     </div>
   );

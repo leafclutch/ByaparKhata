@@ -1,15 +1,28 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Building2, Users, Shield, Info } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Logo } from "@/components/brand/Logo";
-import { DEMO_COMPANY, DEMO_ADMIN, DEMO_OPERATOR, DEMO_OPERATOR_2 } from "@/lib/mock-data";
-
-const users = [DEMO_ADMIN, DEMO_OPERATOR, DEMO_OPERATOR_2];
+import { useAuth } from "@/hooks/useAuth";
+import { getCompany, getCompanyTeam } from "@/lib/services/company";
+import type { Company, AppUser } from "@/lib/types";
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const [company, setCompany] = useState<Company | null>(null);
+  const [team, setTeam] = useState<AppUser[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const cid = user.company_id;
+    Promise.all([getCompany(cid), getCompanyTeam(cid)])
+      .then(([c, t]) => { setCompany(c); setTeam(t); })
+      .catch(() => {});
+  }, [user]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -43,16 +56,15 @@ export default function SettingsPage() {
             </TabsList>
           </div>
 
-          {/* Company tab */}
           <TabsContent value="company" className="m-0 p-6">
             <div className="max-w-lg space-y-4">
               {[
-                { label: "Company Name", value: DEMO_COMPANY.name },
-                { label: "Slug", value: DEMO_COMPANY.slug },
-                { label: "GST Number", value: DEMO_COMPANY.gst_number ?? "—" },
-                { label: "Address", value: DEMO_COMPANY.address ?? "—" },
-                { label: "Currency", value: DEMO_COMPANY.currency },
-                { label: "Timezone", value: DEMO_COMPANY.timezone },
+                { label: "Company Name", value: company?.name ?? "Loading…" },
+                { label: "Slug", value: company?.slug ?? "—" },
+                { label: "PAN/VAT Number", value: company?.gst_number ?? "—" },
+                { label: "Address", value: company?.address ?? "—" },
+                { label: "Currency", value: company?.currency ?? "—" },
+                { label: "Timezone", value: company?.timezone ?? "—" },
               ].map((field) => (
                 <div key={field.label} className="flex items-start gap-4 py-3 border-b border-slate-50 last:border-0">
                   <span className="text-sm text-slate-400 w-36 flex-shrink-0">{field.label}</span>
@@ -66,31 +78,27 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
 
-          {/* Team tab */}
           <TabsContent value="team" className="m-0 p-6">
             <div className="space-y-3 max-w-lg">
-              {users.map((user) => (
-                <div key={user.id} className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
+              {team.length === 0 && <p className="text-sm text-slate-400">Loading team members…</p>}
+              {team.map((member) => (
+                <div key={member.id} className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                    user.role === "admin" ? "bg-brand-100 text-brand-700" : "bg-cyan-100 text-cyan-700"
+                    member.role === "admin" ? "bg-brand-100 text-brand-700" : "bg-cyan-100 text-cyan-700"
                   }`}>
-                    {user.full_name.split(" ").map((n) => n[0]).join("")}
+                    {member.full_name.split(" ").map((n) => n[0]).join("")}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800">{user.full_name}</p>
-                    <p className="text-xs text-slate-500">{user.email}</p>
+                    <p className="text-sm font-semibold text-slate-800">{member.full_name}</p>
+                    <p className="text-xs text-slate-500">{member.email}</p>
                   </div>
-                  <StatusBadge status={user.role} />
-                  <StatusBadge status={user.is_active ? "active" : "inactive"} />
+                  <StatusBadge status={member.role} />
+                  <StatusBadge status={member.is_active ? "active" : "inactive"} />
                 </div>
               ))}
-              <p className="text-xs text-slate-400 pt-2">
-                Team management (invite, deactivate) is available in the full production version with Supabase auth.
-              </p>
             </div>
           </TabsContent>
 
-          {/* Security tab */}
           <TabsContent value="security" className="m-0 p-6">
             <div className="max-w-lg space-y-3">
               {[
@@ -111,7 +119,6 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
 
-          {/* About tab */}
           <TabsContent value="about" className="m-0 p-6">
             <div className="max-w-md">
               <div className="flex items-center gap-4 mb-6">
@@ -120,7 +127,7 @@ export default function SettingsPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex gap-4 py-2 border-b border-slate-50">
                   <span className="text-slate-400 w-32">Product</span>
-                  <span className="font-medium text-slate-800">VyaparKhata</span>
+                  <span className="font-medium text-slate-800">ByaparKhata</span>
                 </div>
                 <div className="flex gap-4 py-2 border-b border-slate-50">
                   <span className="text-slate-400 w-32">Version</span>

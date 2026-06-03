@@ -32,15 +32,17 @@ const features = [
 export default function LoginPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>("admin");
-  const [email, setEmail] = useState(DEMO_CREDS.admin.email);
-  const [password, setPassword] = useState(DEMO_CREDS.admin.password);
+  const [email, setEmail] = useState(IS_DEMO_MODE ? DEMO_CREDS.admin.email : "");
+  const [password, setPassword] = useState(IS_DEMO_MODE ? DEMO_CREDS.admin.password : "");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function handleRoleSwitch(r: Role) {
     setRole(r);
-    setEmail(DEMO_CREDS[r].email);
-    setPassword(DEMO_CREDS[r].password);
+    if (IS_DEMO_MODE) {
+      setEmail(DEMO_CREDS[r].email);
+      setPassword(DEMO_CREDS[r].password);
+    }
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -112,7 +114,7 @@ export default function LoginPage() {
               <span className="text-white font-black text-lg tracking-tight">VK</span>
             </div>
             <div>
-              <div className="text-white font-bold text-xl tracking-tight">VyaparKhata</div>
+              <div className="text-white font-bold text-xl tracking-tight">ByaparKhata</div>
               <div className="text-indigo-300 text-xs">by Leafclutch Technologies</div>
             </div>
           </div>
@@ -266,21 +268,23 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Demo credentials */}
-            <div className="mt-5 p-3.5 bg-brand-50 rounded-xl border border-brand-100">
-              <div className="flex items-center gap-1.5 mb-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-brand-600" />
-                <span className="text-xs font-semibold text-brand-700">Demo credentials pre-filled</span>
+            {/* Demo credentials — only shown in demo mode */}
+            {IS_DEMO_MODE && (
+              <div className="mt-5 p-3.5 bg-brand-50 rounded-xl border border-brand-100">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-brand-600" />
+                  <span className="text-xs font-semibold text-brand-700">Demo credentials pre-filled</span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Email: <code className="text-slate-700">{DEMO_CREDS[role].email}</code><br />
+                  Password: <code className="text-slate-700">{DEMO_CREDS[role].password}</code>
+                </p>
               </div>
-              <p className="text-xs text-slate-500">
-                Email: <code className="text-slate-700">{DEMO_CREDS[role].email}</code><br />
-                Password: <code className="text-slate-700">{DEMO_CREDS[role].password}</code>
-              </p>
-            </div>
+            )}
           </div>
 
           <p className="text-center text-xs text-slate-400 mt-5">
-            © 2026 Leafclutch Technologies · VyaparKhata v1.0
+            © 2026 Leafclutch Technologies · ByaparKhata v1.0
           </p>
         </motion.div>
       </div>

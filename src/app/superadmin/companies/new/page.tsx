@@ -76,8 +76,8 @@ export default function NewCompanyPage() {
               <Input value={form.slug} onChange={(e) => setField("slug", e.target.value)} placeholder="nexusretail" required />
             </div>
             <div className="space-y-1.5">
-              <Label>GST Number</Label>
-              <Input value={form.gst_number} onChange={(e) => setField("gst_number", e.target.value)} placeholder="29ABCDE1234F1Z5" />
+              <Label>PAN/VAT Number</Label>
+              <Input value={form.gst_number} onChange={(e) => setField("gst_number", e.target.value)} placeholder="e.g. 29ABCDE1234F1Z5" />
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Address</Label>

@@ -94,12 +94,13 @@ export default function CompanyDetailPage() {
 
   async function handleResetPassword() {
     if (!resetPwUser || !newPw) return;
+    if (newPw.length < 6) { toast.error("Password must be at least 6 characters."); return; }
     try {
       await resetUserPassword(resetPwUser.id, newPw);
       setResetPwUser(null);
       setNewPw("");
       toast.success("Password reset.");
-    } catch { toast.error("Failed to reset password."); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed to reset password."); }
   }
 
   async function handleDelete() {
@@ -147,7 +148,7 @@ export default function CompanyDetailPage() {
               ["Name", company.name],
               ["Slug", company.slug],
               ["Address", company.address ?? "—"],
-              ["GST", company.gst_number ?? "—"],
+              ["PAN/VAT", company.gst_number ?? "—"],
               ["Contact", company.contact_number ?? "—"],
               ["Email", company.contact_email ?? "—"],
               ["Users", String(company.users_count)],

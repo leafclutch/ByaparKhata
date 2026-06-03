@@ -16,9 +16,6 @@ import { getDashboardKPIs, getMonthlyRevenue, getExpenseBreakdown, getTopProduct
 import { getSales } from "@/lib/services/sales";
 import { getProducts } from "@/lib/services/products";
 import { formatINR, formatDate, getStockStatus } from "@/lib/utils";
-import {
-  DEMO_KPIS, DEMO_MONTHLY_DATA, DEMO_EXPENSE_BREAKDOWN, DEMO_TOP_PRODUCTS,
-} from "@/lib/mock-data";
 import type { DashboardKPIs, MonthlyData, CategoryBreakdown, ProductStat, Sale, Product } from "@/lib/types";
 
 const txnColumns = [
@@ -48,10 +45,10 @@ const productColumns = [
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
-  const [kpis, setKpis] = useState<DashboardKPIs>(DEMO_KPIS);
-  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>(DEMO_MONTHLY_DATA);
-  const [expenseBreakdown, setExpenseBreakdown] = useState<CategoryBreakdown[]>(DEMO_EXPENSE_BREAKDOWN);
-  const [topProducts, setTopProducts] = useState<ProductStat[]>(DEMO_TOP_PRODUCTS);
+  const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [expenseBreakdown, setExpenseBreakdown] = useState<CategoryBreakdown[]>([]);
+  const [topProducts, setTopProducts] = useState<ProductStat[]>([]);
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
 
@@ -75,13 +72,13 @@ export default function AdminDashboardPage() {
     }).catch(() => {});
   }, [user]);
 
-  const kpiCards = [
+  const kpiCards = kpis ? [
     { title: "Total Sales (MTD)", value: kpis.total_sales, delta: kpis.sales_change, icon: ShoppingCart, colorScheme: "indigo" as const, format: "currency" as const },
     { title: "Total Purchases", value: kpis.total_purchases, delta: kpis.purchases_change, icon: PackageSearch, colorScheme: "cyan" as const, format: "currency" as const },
     { title: "Total Expenses", value: kpis.total_expenses, delta: kpis.expenses_change, icon: DollarSign, colorScheme: "amber" as const, format: "currency" as const },
     { title: "Net Profit", value: kpis.net_profit, delta: kpis.profit_change, icon: kpis.net_profit >= 0 ? TrendingUp : TrendingDown, colorScheme: kpis.net_profit >= 0 ? "emerald" as const : "rose" as const, format: "currency" as const },
     { title: "Inventory Value", value: kpis.inventory_value, icon: Package, colorScheme: "violet" as const, format: "currency" as const },
-  ];
+  ] : [];
 
   return (
     <div className="space-y-6">

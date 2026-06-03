@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, Menu, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, Menu } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import {
   Popover,
@@ -8,8 +9,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { DEMO_NOTIFICATIONS } from "@/lib/mock-data";
+import { getNotifications } from "@/lib/services/notifications";
+import { IS_DEMO_MODE } from "@/lib/env";
 import { getInitials, timeAgo, cn } from "@/lib/utils";
-import type { AppUser } from "@/lib/types";
+import type { AppUser, Notification } from "@/lib/types";
 
 interface TopbarProps {
   title: string;
@@ -26,7 +29,14 @@ const notifColors: Record<string, string> = {
 
 export function Topbar({ title, user, actions }: TopbarProps) {
   const { toggleSidebar } = useUIStore();
-  const unread = DEMO_NOTIFICATIONS.filter((n) => !n.is_read);
+  const [notifications, setNotifications] = useState<Notification[]>(IS_DEMO_MODE ? DEMO_NOTIFICATIONS : []);
+
+  useEffect(() => {
+    if (IS_DEMO_MODE || !user?.company_id) return;
+    getNotifications(user.company_id).then(setNotifications).catch(() => {});
+  }, [user?.company_id]);
+
+  const unread = notifications.filter((n) => !n.is_read);
 
   return (
     <header className="h-14 bg-white border-b border-slate-100 flex items-center px-4 gap-3 flex-shrink-0 sticky top-0 z-30">
@@ -63,7 +73,7 @@ export function Topbar({ title, user, actions }: TopbarProps) {
               )}
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
-              {DEMO_NOTIFICATIONS.slice(0, 6).map((n) => (
+              {notifications.slice(0, 6).map((n) => (
                 <div
                   key={n.id}
                   className={cn(

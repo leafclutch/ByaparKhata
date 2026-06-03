@@ -10,9 +10,14 @@ import {
 import { Logo } from "@/components/brand/Logo";
 import { useUIStore } from "@/store/uiStore";
 import { cn, getInitials } from "@/lib/utils";
-import { DEMO_ADMIN, DEMO_COMPANY, DEMO_NOTIFICATIONS } from "@/lib/mock-data";
+import { DEMO_ADMIN } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/client";
 import { IS_DEMO_MODE } from "@/lib/env";
+import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
+import { getNotifications } from "@/lib/services/notifications";
+import { useState, useEffect } from "react";
+import type { Notification } from "@/lib/types";
 
 const navGroups = [
   {
@@ -53,7 +58,17 @@ async function handleSignOut() {
 export function AdminSidebar() {
   const pathname = usePathname();
   const { sidebarOpen, setSidebarOpen } = useUIStore();
-  const unreadCount = DEMO_NOTIFICATIONS.filter((n) => !n.is_read).length;
+  const { user: authUser } = useAuth();
+  const company = useCompany();
+  const sidebarUser = authUser ?? DEMO_ADMIN;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    if (!authUser?.company_id) return;
+    getNotifications(authUser.company_id).then(setNotifications).catch(() => {});
+  }, [authUser?.company_id]);
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -90,7 +105,7 @@ export function AdminSidebar() {
         </div>
 
         <div className="px-4 py-2.5 border-b border-slate-50">
-          <p className="text-xs font-medium text-slate-400 truncate">{DEMO_COMPANY.name}</p>
+          <p className="text-xs font-medium text-slate-400 truncate">{company?.name ?? "—"}</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-2">
@@ -132,11 +147,11 @@ export function AdminSidebar() {
         <div className="border-t border-slate-100 p-3">
           <div className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-slate-50 cursor-pointer mb-1">
             <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-              {getInitials(DEMO_ADMIN.full_name)}
+              {getInitials(sidebarUser.full_name)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-800 truncate">{DEMO_ADMIN.full_name}</p>
-              <p className="text-xs text-slate-400 truncate capitalize">{DEMO_ADMIN.role}</p>
+              <p className="text-sm font-medium text-slate-800 truncate">{sidebarUser.full_name}</p>
+              <p className="text-xs text-slate-400 truncate capitalize">{sidebarUser.role}</p>
             </div>
           </div>
           <button

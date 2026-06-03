@@ -79,7 +79,7 @@ export default function SACompaniesPage() {
       {/* Search */}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input placeholder="Search name, slug, GST…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
+        <Input placeholder="Search name, slug, PAN/VAT…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
       </div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">

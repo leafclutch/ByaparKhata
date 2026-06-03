@@ -50,7 +50,7 @@ export default function SuperadminLoginPage() {
           <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center mb-3">
             <Shield className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-white">VyaparKhata</h1>
+          <h1 className="text-xl font-bold text-white">ByaparKhata</h1>
           <p className="text-sm text-slate-400 mt-1">Super Admin Portal</p>
         </div>
 
@@ -64,7 +64,7 @@ export default function SuperadminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@vyaparkhata.com"
+                placeholder="admin@byaparkhata.com"
                 required
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-indigo-500"
               />
@@ -100,7 +100,7 @@ export default function SuperadminLoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-600 mt-6">
-          Restricted access · VyaparKhata Internal
+          Restricted access · ByaparKhata Internal
         </p>
       </div>
     </div>
