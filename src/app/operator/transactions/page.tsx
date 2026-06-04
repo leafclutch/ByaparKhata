@@ -11,14 +11,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { getSales } from "@/lib/services/sales";
 import { getPurchases } from "@/lib/services/purchases";
 import { getExpenses } from "@/lib/services/expenses";
-import { formatINR, formatDate } from "@/lib/utils";
+import { formatNPR, formatDate } from "@/lib/utils";
 import type { Sale, Purchase, Expense } from "@/lib/types";
 
 const salesColumns = [
   { key: "invoice_number", header: "Invoice", render: (r: Sale) => <code className="text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded font-medium">{r.invoice_number}</code> },
   { key: "customer_name", header: "Customer", render: (r: Sale) => <span className="text-sm text-slate-700">{r.customer_name || "Walk-in"}</span> },
   { key: "payment_method", header: "Payment", render: (r: Sale) => <StatusBadge status={r.payment_method} /> },
-  { key: "grand_total", header: "Total", render: (r: Sale) => <span className="text-sm font-semibold text-emerald-700">{formatINR(r.grand_total)}</span> },
+  { key: "grand_total", header: "Total", render: (r: Sale) => <span className="text-sm font-semibold text-emerald-700">{formatNPR(r.grand_total)}</span> },
   { key: "created_at", header: "Date", render: (r: Sale) => <span className="text-xs text-slate-400">{formatDate(r.created_at)}</span> },
 ];
 
@@ -27,7 +27,7 @@ const purchaseColumns = [
   { key: "supplier_name", header: "Supplier", render: (r: Purchase) => <span className="text-sm text-slate-700">{r.supplier_name}</span> },
   { key: "product_name", header: "Product", render: (r: Purchase) => <span className="text-sm text-slate-600">{r.product_name}</span> },
   { key: "quantity", header: "Qty", render: (r: Purchase) => <span className="text-sm text-slate-600">×{r.quantity}</span> },
-  { key: "total_cost", header: "Cost", render: (r: Purchase) => <span className="text-sm font-semibold text-rose-700">{formatINR(r.total_cost)}</span> },
+  { key: "total_cost", header: "Cost", render: (r: Purchase) => <span className="text-sm font-semibold text-rose-700">{formatNPR(r.total_cost)}</span> },
   { key: "purchased_at", header: "Date", render: (r: Purchase) => <span className="text-xs text-slate-400">{formatDate(r.purchased_at)}</span> },
 ];
 
@@ -35,7 +35,7 @@ const expenseColumns = [
   { key: "category", header: "Category", render: (r: Expense) => <StatusBadge status={r.category} /> },
   { key: "description", header: "Description", render: (r: Expense) => <span className="text-sm text-slate-700">{r.description}</span> },
   { key: "payment_method", header: "Payment", render: (r: Expense) => <StatusBadge status={r.payment_method} /> },
-  { key: "amount", header: "Amount", render: (r: Expense) => <span className="text-sm font-semibold text-rose-700">{formatINR(r.amount)}</span> },
+  { key: "amount", header: "Amount", render: (r: Expense) => <span className="text-sm font-semibold text-rose-700">{formatNPR(r.amount)}</span> },
   { key: "expense_date", header: "Date", render: (r: Expense) => <span className="text-xs text-slate-400">{r.expense_date}</span> },
 ];
 
@@ -74,7 +74,7 @@ export default function TransactionsPage() {
           <motion.div key={chip.label} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium ${chip.color}`}>
             <span>{chip.label}</span>
             <span className="text-xs opacity-70">{chip.count} records</span>
-            <span className="font-bold">{formatINR(chip.value)}</span>
+            <span className="font-bold">{formatNPR(chip.value)}</span>
           </motion.div>
         ))}
       </div>
@@ -93,7 +93,7 @@ export default function TransactionsPage() {
 
           <TabsContent value="sales" className="m-0">
             <div className="px-5 py-3 border-b border-slate-50">
-              <span className="text-xs font-semibold text-emerald-700">{mySales.length} sales · Total: {formatINR(mySales.reduce((s, r) => s + r.grand_total, 0))}</span>
+              <span className="text-xs font-semibold text-emerald-700">{mySales.length} sales · Total: {formatNPR(mySales.reduce((s, r) => s + r.grand_total, 0))}</span>
             </div>
             {mySales.length > 0
               ? <DataTable columns={salesColumns} data={mySales} rowKey="id" searchable searchKeys={["customer_name", "invoice_number"]} />
@@ -102,7 +102,7 @@ export default function TransactionsPage() {
 
           <TabsContent value="purchases" className="m-0">
             <div className="px-5 py-3 border-b border-slate-50">
-              <span className="text-xs font-semibold text-rose-700">{myPurchases.length} purchases · Total: {formatINR(myPurchases.reduce((s, r) => s + r.total_cost, 0))}</span>
+              <span className="text-xs font-semibold text-rose-700">{myPurchases.length} purchases · Total: {formatNPR(myPurchases.reduce((s, r) => s + r.total_cost, 0))}</span>
             </div>
             {myPurchases.length > 0
               ? <DataTable columns={purchaseColumns} data={myPurchases} rowKey="id" />
@@ -111,7 +111,7 @@ export default function TransactionsPage() {
 
           <TabsContent value="expenses" className="m-0">
             <div className="px-5 py-3 border-b border-slate-50">
-              <span className="text-xs font-semibold text-amber-700">{myExpenses.length} expenses · Total: {formatINR(myExpenses.reduce((s, r) => s + r.amount, 0))}</span>
+              <span className="text-xs font-semibold text-amber-700">{myExpenses.length} expenses · Total: {formatNPR(myExpenses.reduce((s, r) => s + r.amount, 0))}</span>
             </div>
             {myExpenses.length > 0
               ? <DataTable columns={expenseColumns} data={myExpenses} rowKey="id" />

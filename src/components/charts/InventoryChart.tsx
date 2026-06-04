@@ -12,7 +12,7 @@ import {
   Cell,
 } from "recharts";
 import type { ProductStat } from "@/lib/types";
-import { formatINRCompact } from "@/lib/utils";
+import { formatNPRCompact } from "@/lib/utils";
 
 interface InventoryChartProps {
   data: ProductStat[];
@@ -27,7 +27,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   return (
     <div className="bg-white border border-slate-100 rounded-xl shadow-lg p-3 text-sm max-w-[180px]">
       <p className="font-semibold text-slate-800 mb-1">{d.name}</p>
-      <p className="text-slate-500">Revenue: <span className="font-semibold text-slate-800">{formatINRCompact(d.total_revenue)}</span></p>
+      <p className="text-slate-500">Revenue: <span className="font-semibold text-slate-800">{formatNPRCompact(d.total_revenue)}</span></p>
       <p className="text-slate-500">Units sold: <span className="font-semibold text-slate-800">{d.units_sold}</span></p>
     </div>
   );
@@ -53,7 +53,7 @@ export function InventoryChart({ data, height = 240 }: InventoryChartProps) {
             tick={{ fontSize: 11, fill: "#94a3b8" }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`}
+            tickFormatter={(v: any) => `Rs. ${(Number(v) / 100000).toFixed(0)}L`}
           />
           <YAxis
             type="category"

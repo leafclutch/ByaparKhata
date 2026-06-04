@@ -1,10 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Product, Category } from "@/lib/types";
-import { IS_DEMO_MODE } from "@/lib/env";
-import { DEMO_PRODUCTS, DEMO_CATEGORIES } from "@/lib/mock-data";
+import type { Product, InventoryTransaction, Actor } from "@/lib/types";
+import { logActivity } from "./activity";
 
 export async function getProducts(companyId: string): Promise<Product[]> {
-  if (IS_DEMO_MODE) return DEMO_PRODUCTS;
   const supabase = createClient();
   const { data, error } = await supabase
     .from("products")
@@ -16,22 +14,10 @@ export async function getProducts(companyId: string): Promise<Product[]> {
   return data ?? [];
 }
 
-export async function getCategories(companyId: string): Promise<Category[]> {
-  if (IS_DEMO_MODE) return DEMO_CATEGORIES;
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("company_id", companyId)
-    .order("name");
-  if (error) throw error;
-  return data ?? [];
-}
-
 export interface CreateProductInput {
   company_id: string;
   name: string;
-  sku: string;
+  sku?: string;
   barcode?: string;
   category_id?: string;
   purchase_price: number;
@@ -43,30 +29,81 @@ export interface CreateProductInput {
   expiry_notification_days?: number;
 }
 
-export async function createProduct(input: CreateProductInput): Promise<Product> {
-  if (IS_DEMO_MODE) {
-    const now = new Date().toISOString();
-    const cat = DEMO_CATEGORIES.find((c) => c.id === input.category_id);
-    return { id: `prod-${Date.now()}`, ...input, is_active: true, category: cat, created_at: now, updated_at: now } as Product;
-  }
+export async function generateSKU(companyId: string, categoryPrefix?: string): Promise<string> {
   const supabase = createClient();
+  const { count, error } = await supabase
+    .from("products")
+    .select("*", { count: "exact", head: true })
+    .eq("company_id", companyId);
+  if (error) throw error;
+
+  const nextNum = (count ?? 0) + 1;
+  const prefix = categoryPrefix ? categoryPrefix.toUpperCase().slice(0, 4) : "HH";
+  return `${prefix}-${String(nextNum).padStart(4, "0")}`;
+}
+
+export async function createProduct(input: CreateProductInput, actor?: Actor): Promise<Product> {
+  const supabase = createClient();
+
+  const sku = input.sku || (await generateSKU(input.company_id));
+
   const { data, error } = await supabase
     .from("products")
-    .insert(input)
+    .insert({ ...input, sku })
     .select("*, category:categories(id, name, color, slug, level, parent_id)")
     .single();
   if (error) throw error;
+
+  if (actor) {
+    await logActivity({
+      company_id: input.company_id,
+      actor,
+      action: "create",
+      entity_type: "product",
+      entity_id: data.id,
+      entity_label: `${data.name} (${sku})`,
+    });
+  }
+
   return data;
 }
 
-export async function updateProduct(id: string, updates: Partial<CreateProductInput & { is_active: boolean }>): Promise<Product> {
-  if (IS_DEMO_MODE) {
-    const now = new Date().toISOString();
-    const existing = DEMO_PRODUCTS.find((p) => p.id === id);
-    const cat = updates.category_id ? DEMO_CATEGORIES.find((c) => c.id === updates.category_id) : existing?.category;
-    return { ...(existing ?? {}), ...updates, category: cat, id, updated_at: now } as Product;
-  }
+export async function updateProduct(
+  id: string,
+  updates: Partial<CreateProductInput & { is_active: boolean }>,
+  actor?: Actor,
+  adjustmentNotes?: string
+): Promise<Product> {
   const supabase = createClient();
+
+  let oldQty: number | undefined;
+  let companyId: string | undefined;
+  let productName: string | undefined;
+
+  if (updates.quantity !== undefined || actor) {
+    const { data: current } = await supabase
+      .from("products")
+      .select("quantity, company_id, name, sku")
+      .eq("id", id)
+      .single();
+    oldQty = current?.quantity;
+    companyId = current?.company_id;
+    productName = current?.name;
+
+    if (updates.quantity !== undefined && oldQty !== undefined) {
+      await supabase.from("inventory_transactions").insert({
+        company_id: companyId,
+        product_id: id,
+        quantity_change: updates.quantity - oldQty,
+        previous_stock: oldQty,
+        new_stock: updates.quantity,
+        reference_type: "adjustment",
+        notes: adjustmentNotes ?? null,
+        // reference_id is null for manual adjustments
+      });
+    }
+  }
+
   const { data, error } = await supabase
     .from("products")
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -74,12 +111,57 @@ export async function updateProduct(id: string, updates: Partial<CreateProductIn
     .select("*, category:categories(id, name, color, slug, level, parent_id)")
     .single();
   if (error) throw error;
+
+  if (actor && companyId) {
+    const isStockAdjust = updates.quantity !== undefined && oldQty !== undefined;
+    await logActivity({
+      company_id: companyId,
+      actor,
+      action: isStockAdjust ? "adjustment" : "update",
+      entity_type: "product",
+      entity_id: id,
+      entity_label: isStockAdjust
+        ? `${productName}: ${oldQty} → ${updates.quantity} units`
+        : `${data.name} (${data.sku})`,
+    });
+  }
+
   return data;
 }
 
-export async function deleteProduct(id: string): Promise<void> {
-  if (IS_DEMO_MODE) return;
+export async function getInventoryTransactions(companyId: string): Promise<InventoryTransaction[]> {
   const supabase = createClient();
+  const { data, error } = await supabase
+    .from("inventory_transactions")
+    .select("*, product:products(name, sku)")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function deleteProduct(id: string, actor?: Actor): Promise<void> {
+  const supabase = createClient();
+
+  let companyId: string | undefined;
+  let productLabel: string | undefined;
+  if (actor) {
+    const { data } = await supabase.from("products").select("company_id, name, sku").eq("id", id).single();
+    companyId = data?.company_id;
+    productLabel = data ? `${data.name} (${data.sku})` : id;
+  }
+
   const { error } = await supabase.from("products").update({ is_active: false }).eq("id", id);
   if (error) throw error;
+
+  if (actor && companyId) {
+    await logActivity({
+      company_id: companyId,
+      actor,
+      action: "delete",
+      entity_type: "product",
+      entity_id: id,
+      entity_label: productLabel,
+    });
+  }
 }

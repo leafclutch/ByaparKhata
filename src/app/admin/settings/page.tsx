@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Building2, Users, Shield, Info } from "lucide-react";
+import { Building2, Users, Info, Lock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Logo } from "@/components/brand/Logo";
@@ -41,7 +41,6 @@ export default function SettingsPage() {
               {[
                 { value: "company", label: "Company", icon: Building2 },
                 { value: "team", label: "Team", icon: Users },
-                { value: "security", label: "Security", icon: Shield },
                 { value: "about", label: "About", icon: Info },
               ].map((tab) => (
                 <TabsTrigger
@@ -61,10 +60,9 @@ export default function SettingsPage() {
               {[
                 { label: "Company Name", value: company?.name ?? "Loading…" },
                 { label: "Slug", value: company?.slug ?? "—" },
-                { label: "PAN/VAT Number", value: company?.gst_number ?? "—" },
+                { label: "PAN/VAT Number", value: company?.pan_vat_number ?? "—" },
                 { label: "Address", value: company?.address ?? "—" },
-                { label: "Currency", value: company?.currency ?? "—" },
-                { label: "Timezone", value: company?.timezone ?? "—" },
+                { label: "Timezone", value: company?.timezone ?? "Asia/Kathmandu" },
               ].map((field) => (
                 <div key={field.label} className="flex items-start gap-4 py-3 border-b border-slate-50 last:border-0">
                   <span className="text-sm text-slate-400 w-36 flex-shrink-0">{field.label}</span>
@@ -72,7 +70,7 @@ export default function SettingsPage() {
                 </div>
               ))}
               <p className="text-xs text-slate-400 pt-2 flex items-center gap-1.5">
-                <Shield className="w-3 h-3" />
+                <Lock className="w-3 h-3" />
                 Company details can only be updated by contacting support.
               </p>
             </div>
@@ -99,51 +97,23 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="security" className="m-0 p-6">
-            <div className="max-w-lg space-y-3">
-              {[
-                { label: "Authentication", value: "Email / Password", note: "Supabase Auth" },
-                { label: "Row-Level Security", value: "Enabled", note: "All tables isolated by company_id" },
-                { label: "Role-Based Access", value: "Admin + Operator", note: "Enforced via middleware" },
-                { label: "Session Management", value: "JWT + Cookie", note: "Supabase SSR session refresh" },
-                { label: "Service Role Key", value: "Server-only", note: "Never exposed to client" },
-              ].map((item) => (
-                <div key={item.label} className="flex items-start gap-4 py-3 border-b border-slate-50 last:border-0">
-                  <span className="text-sm text-slate-400 w-44 flex-shrink-0">{item.label}</span>
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{item.value}</p>
-                    <p className="text-xs text-slate-400">{item.note}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </TabsContent>
-
           <TabsContent value="about" className="m-0 p-6">
             <div className="max-w-md">
               <div className="flex items-center gap-4 mb-6">
-                <Logo size="lg" />
+                <Logo size="lg" logoUrl={company?.logo_url} companyName={company?.name} />
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex gap-4 py-2 border-b border-slate-50">
                   <span className="text-slate-400 w-32">Product</span>
-                  <span className="font-medium text-slate-800">ByaparKhata</span>
+                  <span className="font-medium text-slate-800">HamroHisab</span>
                 </div>
                 <div className="flex gap-4 py-2 border-b border-slate-50">
                   <span className="text-slate-400 w-32">Version</span>
                   <span className="font-medium text-slate-800">v1.0.0</span>
                 </div>
-                <div className="flex gap-4 py-2 border-b border-slate-50">
+                <div className="flex gap-4 py-2">
                   <span className="text-slate-400 w-32">Company</span>
                   <span className="font-medium text-slate-800">Leafclutch Technologies Pvt. Ltd.</span>
-                </div>
-                <div className="flex gap-4 py-2 border-b border-slate-50">
-                  <span className="text-slate-400 w-32">Stack</span>
-                  <span className="font-medium text-slate-800">Next.js 16 · Supabase · Vercel</span>
-                </div>
-                <div className="flex gap-4 py-2">
-                  <span className="text-slate-400 w-32">License</span>
-                  <span className="font-medium text-slate-800">© 2026 Leafclutch Technologies</span>
                 </div>
               </div>
             </div>

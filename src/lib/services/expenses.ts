@@ -1,10 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Expense, ExpenseCategory, PaymentMethod } from "@/lib/types";
-import { IS_DEMO_MODE } from "@/lib/env";
-import { DEMO_EXPENSES } from "@/lib/mock-data";
 
 export async function getExpenses(companyId: string): Promise<Expense[]> {
-  if (IS_DEMO_MODE) return DEMO_EXPENSES;
   const supabase = createClient();
   const { data, error } = await supabase
     .from("expenses")
@@ -28,13 +25,6 @@ export interface CreateExpenseInput {
 }
 
 export async function createExpense(input: CreateExpenseInput): Promise<Expense> {
-  if (IS_DEMO_MODE) {
-    return {
-      id: `exp-${Date.now()}`,
-      ...input,
-      created_at: new Date().toISOString(),
-    } as Expense;
-  }
   const supabase = createClient();
   const { data, error } = await supabase.from("expenses").insert(input).select().single();
   if (error) throw error;

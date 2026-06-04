@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { IS_DEMO_MODE } from "@/lib/env";
-import { DEMO_ADMIN, DEMO_OPERATOR } from "@/lib/mock-data";
 import type { AppUser } from "@/lib/types";
 
 interface AuthState {
@@ -14,15 +12,6 @@ export function useAuth(): AuthState {
   const [state, setState] = useState<AuthState>({ user: null, loading: true });
 
   useEffect(() => {
-    if (IS_DEMO_MODE) {
-      // In demo mode, infer role from current path
-      const path = window.location.pathname;
-      const user = path.startsWith("/operator") ? DEMO_OPERATOR : DEMO_ADMIN;
-      setState({ user, loading: false });
-      return;
-    }
-
-    // Real Supabase auth — dynamically imported to avoid SSR issues
     import("@/lib/supabase/client").then(({ createClient }) => {
       const supabase = createClient();
 

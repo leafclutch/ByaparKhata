@@ -61,10 +61,10 @@ export default function SAUsersPage() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
+        <div className="overflow-auto scrollbar-thin scrollbar-thumb-slate-200 max-h-[65vh]">
+          <table className="w-full text-sm relative border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-slate-100 bg-slate-50">
                 {["User", "Role", "Company", "Email", "Status", "Joined", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
@@ -90,7 +90,7 @@ export default function SAUsersPage() {
                   <td className="px-4 py-3">
                     <StatusBadge status={u.is_active ? "active" : "disabled"} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString("en-IN")}</td>
+                  <td className="px-4 py-3 text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => toggleUserStatus(u)}

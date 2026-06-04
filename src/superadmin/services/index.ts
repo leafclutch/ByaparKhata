@@ -1,29 +1,18 @@
-import { IS_DEMO_MODE } from "@/lib/env";
 import type {
   CompanyStat, SuperadminUser, PlatformKPIs,
   SubscriptionRenewal, CompanyGrowthPoint, SuperadminProfile,
   CompanyStatus,
 } from "@/lib/types";
-import {
-  SA_COMPANIES, SA_ALL_USERS, SA_PLATFORM_KPIS,
-  SA_RENEWALS, SA_GROWTH, SA_PROFILE,
-} from "@/superadmin/lib/mock-data";
 
 // ─── Companies ───────────────────────────────────────────────────────────────
 
 export async function getCompanies(): Promise<CompanyStat[]> {
-  if (IS_DEMO_MODE) return SA_COMPANIES;
   const res = await fetch("/api/superadmin/companies");
   if (!res.ok) throw new Error("Failed to fetch companies");
   return res.json();
 }
 
 export async function getCompanyById(id: string): Promise<CompanyStat> {
-  if (IS_DEMO_MODE) {
-    const company = SA_COMPANIES.find((c) => c.id === id);
-    if (!company) throw new Error("Company not found");
-    return company;
-  }
   const res = await fetch(`/api/superadmin/companies/${id}`);
   if (!res.ok) throw new Error("Failed to fetch company");
   return res.json();
@@ -35,28 +24,31 @@ export interface CreateCompanyInput {
   address?: string;
   contact_number?: string;
   contact_email?: string;
-  gst_number?: string;
+  pan_vat_number?: string;
+  logo_url?: string;
   plan: CompanyStat["plan"];
   joining_date: string;
   subscription_start: string;
   subscription_end: string;
 }
 
+export async function uploadCompanyLogo(slug: string, file: File): Promise<string> {
+  const { createClient } = await import("@/lib/supabase/client");
+  const supabase = createClient();
+
+  const fileExt = file.name.split(".").pop();
+  const filePath = `${slug}/${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("company-logos")
+    .upload(filePath, file);
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage.from("company-logos").getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
 export async function createCompany(input: CreateCompanyInput): Promise<CompanyStat> {
-  if (IS_DEMO_MODE) {
-    const now = new Date().toISOString();
-    return {
-      id: `comp-${Date.now()}`,
-      ...input,
-      subscription_status: "active",
-      company_status: "active",
-      users_count: 0,
-      products_count: 0,
-      sales_count: 0,
-      total_sales_value: 0,
-      created_at: now,
-    } as CompanyStat;
-  }
   const res = await fetch("/api/superadmin/companies", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -67,10 +59,6 @@ export async function createCompany(input: CreateCompanyInput): Promise<CompanyS
 }
 
 export async function updateCompany(id: string, updates: Partial<CreateCompanyInput>): Promise<CompanyStat> {
-  if (IS_DEMO_MODE) {
-    const existing = SA_COMPANIES.find((c) => c.id === id) ?? SA_COMPANIES[0];
-    return { ...existing, ...updates };
-  }
   const res = await fetch(`/api/superadmin/companies/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -81,7 +69,6 @@ export async function updateCompany(id: string, updates: Partial<CreateCompanyIn
 }
 
 export async function setCompanyStatus(id: string, status: CompanyStatus): Promise<void> {
-  if (IS_DEMO_MODE) return;
   const res = await fetch(`/api/superadmin/companies/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -96,7 +83,6 @@ export async function renewSubscription(
   months: number,
   fromDate?: string
 ): Promise<void> {
-  if (IS_DEMO_MODE) return;
   const res = await fetch(`/api/superadmin/companies/${id}/renew`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -106,7 +92,6 @@ export async function renewSubscription(
 }
 
 export async function deleteCompany(id: string): Promise<void> {
-  if (IS_DEMO_MODE) return;
   const res = await fetch(`/api/superadmin/companies/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error(await res.text());
 }
@@ -114,14 +99,12 @@ export async function deleteCompany(id: string): Promise<void> {
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 export async function getCompanyUsers(companyId: string): Promise<SuperadminUser[]> {
-  if (IS_DEMO_MODE) return SA_ALL_USERS.filter((u) => u.company_id === companyId);
   const res = await fetch(`/api/superadmin/users?company_id=${companyId}`);
   if (!res.ok) throw new Error("Failed to fetch users");
   return res.json();
 }
 
 export async function getAllUsers(): Promise<SuperadminUser[]> {
-  if (IS_DEMO_MODE) return SA_ALL_USERS;
   const res = await fetch("/api/superadmin/users");
   if (!res.ok) throw new Error("Failed to fetch users");
   return res.json();
@@ -137,19 +120,6 @@ export interface CreateUserInput {
 }
 
 export async function createUser(input: CreateUserInput): Promise<SuperadminUser> {
-  if (IS_DEMO_MODE) {
-    const company = SA_COMPANIES.find((c) => c.id === input.company_id);
-    return {
-      id: `user-${Date.now()}`,
-      company_id: input.company_id,
-      company_name: company?.name ?? "",
-      full_name: input.full_name,
-      role: input.role,
-      email: `${input.username}@${input.company_slug}`,
-      is_active: true,
-      created_at: new Date().toISOString(),
-    };
-  }
   const res = await fetch("/api/superadmin/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -160,10 +130,6 @@ export async function createUser(input: CreateUserInput): Promise<SuperadminUser
 }
 
 export async function updateUser(id: string, updates: { full_name?: string }): Promise<SuperadminUser> {
-  if (IS_DEMO_MODE) {
-    const existing = SA_ALL_USERS.find((u) => u.id === id) ?? SA_ALL_USERS[0];
-    return { ...existing, ...updates };
-  }
   const res = await fetch(`/api/superadmin/users/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -174,7 +140,6 @@ export async function updateUser(id: string, updates: { full_name?: string }): P
 }
 
 export async function setUserStatus(id: string, isActive: boolean): Promise<void> {
-  if (IS_DEMO_MODE) return;
   const res = await fetch(`/api/superadmin/users/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -184,7 +149,6 @@ export async function setUserStatus(id: string, isActive: boolean): Promise<void
 }
 
 export async function resetUserPassword(userId: string, newPassword: string): Promise<void> {
-  if (IS_DEMO_MODE) return;
   const res = await fetch(`/api/superadmin/users/${userId}/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -199,21 +163,18 @@ export async function resetUserPassword(userId: string, newPassword: string): Pr
 // ─── Platform stats ───────────────────────────────────────────────────────────
 
 export async function getPlatformKPIs(): Promise<PlatformKPIs> {
-  if (IS_DEMO_MODE) return SA_PLATFORM_KPIS;
   const res = await fetch("/api/superadmin/stats");
   if (!res.ok) throw new Error("Failed to fetch KPIs");
   return res.json();
 }
 
 export async function getSubscriptionRenewals(): Promise<SubscriptionRenewal[]> {
-  if (IS_DEMO_MODE) return SA_RENEWALS;
   const res = await fetch("/api/superadmin/renewals");
   if (!res.ok) throw new Error("Failed to fetch renewals");
   return res.json();
 }
 
 export async function getCompanyGrowth(): Promise<CompanyGrowthPoint[]> {
-  if (IS_DEMO_MODE) return SA_GROWTH;
   const res = await fetch("/api/superadmin/growth");
   if (!res.ok) throw new Error("Failed to fetch growth data");
   return res.json();
@@ -222,14 +183,12 @@ export async function getCompanyGrowth(): Promise<CompanyGrowthPoint[]> {
 // ─── SA Profile ───────────────────────────────────────────────────────────────
 
 export async function getSAProfile(): Promise<SuperadminProfile> {
-  if (IS_DEMO_MODE) return SA_PROFILE;
   const res = await fetch("/api/superadmin/profile");
   if (!res.ok) throw new Error("Failed to fetch profile");
   return res.json();
 }
 
 export async function updateSAProfile(updates: Partial<SuperadminProfile>): Promise<SuperadminProfile> {
-  if (IS_DEMO_MODE) return { ...SA_PROFILE, ...updates };
   const res = await fetch("/api/superadmin/profile", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

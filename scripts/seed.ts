@@ -1,5 +1,5 @@
 /**
- * Seed script for VyaparKhata dev/staging Supabase database.
+ * Seed script for HamroHisab dev/staging Supabase database.
  * Run with: npx tsx scripts/seed.ts
  *
  * Requires SUPABASE_SERVICE_ROLE_KEY in .env.local
@@ -25,7 +25,7 @@ const supabase = createClient(supabaseUrl, serviceKey, {
 });
 
 async function seed() {
-  console.log("🌱  Seeding VyaparKhata database...\n");
+  console.log("🌱  Seeding HamroHisab database...\n");
 
   // ── Company ──────────────────────────────────────────────
   const { data: company, error: companyErr } = await supabase
@@ -34,7 +34,7 @@ async function seed() {
       name: "Nexus Retail Pvt. Ltd.",
       slug: "nexus-retail",
       address: "12, MG Road, Bengaluru, Karnataka - 560001",
-      gst_number: "29ABCDE1234F1Z5",
+      pan_vat_number: "29ABCDE1234F1Z5",
       currency: "INR",
       timezone: "Asia/Kolkata",
     })

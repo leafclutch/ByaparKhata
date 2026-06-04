@@ -134,7 +134,6 @@ export default function CategoriesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
   const [editTarget, setEditTarget] = useState<Category | null>(null);
-  const [defaultParentId, setDefaultParentId] = useState<string | undefined>();
   const [formName, setFormName] = useState("");
   const [formParentId, setFormParentId] = useState<string>("none");
   const [formColor, setFormColor] = useState(COLORS[0]);

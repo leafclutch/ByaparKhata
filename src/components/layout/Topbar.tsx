@@ -8,9 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { DEMO_NOTIFICATIONS } from "@/lib/mock-data";
 import { getNotifications } from "@/lib/services/notifications";
-import { IS_DEMO_MODE } from "@/lib/env";
 import { getInitials, timeAgo, cn } from "@/lib/utils";
 import type { AppUser, Notification } from "@/lib/types";
 
@@ -29,18 +27,17 @@ const notifColors: Record<string, string> = {
 
 export function Topbar({ title, user, actions }: TopbarProps) {
   const { toggleSidebar } = useUIStore();
-  const [notifications, setNotifications] = useState<Notification[]>(IS_DEMO_MODE ? DEMO_NOTIFICATIONS : []);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
-    if (IS_DEMO_MODE || !user?.company_id) return;
+    if (!user?.company_id) return;
     getNotifications(user.company_id).then(setNotifications).catch(() => {});
   }, [user?.company_id]);
 
   const unread = notifications.filter((n) => !n.is_read);
 
   return (
-    <header className="h-14 bg-white border-b border-slate-100 flex items-center px-4 gap-3 flex-shrink-0 sticky top-0 z-30">
-      {/* Mobile hamburger */}
+    <header className="h-14 bg-white/95 backdrop-blur-sm border-b border-slate-100 flex items-center px-4 gap-3 flex-shrink-0 sticky top-0 z-30">
       <button
         className="lg:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
         onClick={toggleSidebar}
@@ -53,7 +50,6 @@ export function Topbar({ title, user, actions }: TopbarProps) {
       <div className="flex items-center gap-2 ml-auto">
         {actions}
 
-        {/* Notification bell */}
         <Popover>
           <PopoverTrigger asChild>
             <button className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors">
@@ -73,6 +69,9 @@ export function Topbar({ title, user, actions }: TopbarProps) {
               )}
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
+              {notifications.length === 0 && (
+                <p className="px-4 py-6 text-center text-xs text-slate-400">No notifications</p>
+              )}
               {notifications.slice(0, 6).map((n) => (
                 <div
                   key={n.id}
@@ -94,7 +93,6 @@ export function Topbar({ title, user, actions }: TopbarProps) {
           </PopoverContent>
         </Popover>
 
-        {/* Avatar */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-100">
           <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xs font-bold">
             {getInitials(user.full_name)}

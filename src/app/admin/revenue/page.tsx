@@ -7,7 +7,7 @@ import { RevenueAreaChart } from "@/components/charts/RevenueAreaChart";
 import { SalesBarChart } from "@/components/charts/SalesBarChart";
 import { useAuth } from "@/hooks/useAuth";
 import { getDashboardKPIs, getMonthlyRevenue } from "@/lib/services/analytics";
-import { formatINR, formatINRCompact } from "@/lib/utils";
+import { formatNPR, formatNPRCompact } from "@/lib/utils";
 import type { DashboardKPIs, MonthlyData } from "@/lib/types";
 
 export default function RevenuePage() {
@@ -56,7 +56,7 @@ export default function RevenuePage() {
             className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm"
           >
             <p className="text-xs text-slate-500 mb-2">{card.label}</p>
-            <p className="text-xl font-bold text-slate-900">{formatINRCompact(card.value)}</p>
+            <p className="text-xl font-bold text-slate-900">{formatNPRCompact(card.value)}</p>
             {card.change !== null && card.change !== 0 && (
               <div className="flex items-center gap-1 mt-1.5">
                 <ArrowUpRight className="w-3 h-3 text-emerald-600" />
@@ -124,10 +124,10 @@ export default function RevenuePage() {
               {monthlyTotals.map((row) => (
                 <tr key={row.month} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3 font-medium text-slate-800">{row.month}</td>
-                  <td className="px-5 py-3 text-right text-emerald-700 font-semibold">{formatINR(row.sales)}</td>
-                  <td className="px-5 py-3 text-right text-rose-600">{formatINR(row.purchases)}</td>
-                  <td className="px-5 py-3 text-right text-amber-600">{formatINR(row.expenses)}</td>
-                  <td className="px-5 py-3 text-right font-bold text-slate-900">{formatINR(row.profit)}</td>
+                  <td className="px-5 py-3 text-right text-emerald-700 font-semibold">{formatNPR(row.sales)}</td>
+                  <td className="px-5 py-3 text-right text-rose-600">{formatNPR(row.purchases)}</td>
+                  <td className="px-5 py-3 text-right text-amber-600">{formatNPR(row.expenses)}</td>
+                  <td className="px-5 py-3 text-right font-bold text-slate-900">{formatNPR(row.profit)}</td>
                   <td className="px-5 py-3 text-right">
                     {row.growth > 0 ? (
                       <span className="text-xs font-medium text-emerald-600">+{row.growth}%</span>

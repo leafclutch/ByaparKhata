@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { getExpenses, createExpense } from "@/lib/services/expenses";
-import { formatINR, EXPENSE_CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/utils";
+import { formatNPR, EXPENSE_CATEGORY_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/utils";
 import type { Expense, ExpenseCategory, PaymentMethod } from "@/lib/types";
 
 type ExpenseForm = {
@@ -83,7 +83,7 @@ export default function ExpensesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-slate-900">Expenses</h2>
-          <p className="text-sm text-slate-500 mt-0.5">{expenses.length} records · Total: {formatINR(total)}</p>
+          <p className="text-sm text-slate-500 mt-0.5">{expenses.length} records · Total: {formatNPR(total)}</p>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="h-9 gap-1.5 text-sm bg-brand-600 hover:bg-brand-700">
           <Plus className="w-4 h-4" /> Add Expense
@@ -91,10 +91,10 @@ export default function ExpensesPage() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
+        <div className="overflow-auto scrollbar-thin scrollbar-thumb-slate-200 max-h-[65vh]">
+          <table className="w-full text-sm relative border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-slate-100 bg-slate-50">
                 {["Category", "Description", "Recorded By", "Payment", "Amount", "Date"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
@@ -111,7 +111,7 @@ export default function ExpensesPage() {
                     <td className="px-4 py-3 text-slate-700 max-w-[200px] truncate">{exp.description}</td>
                     <td className="px-4 py-3 text-xs text-slate-500">{exp.operator?.full_name ?? "—"}</td>
                     <td className="px-4 py-3"><StatusBadge status={exp.payment_method} /></td>
-                    <td className="px-4 py-3 font-semibold text-rose-700">{formatINR(exp.amount)}</td>
+                    <td className="px-4 py-3 font-semibold text-rose-700">{formatNPR(exp.amount)}</td>
                     <td className="px-4 py-3 text-xs text-slate-400">{exp.expense_date}</td>
                   </motion.tr>
                 ))}
@@ -144,7 +144,7 @@ export default function ExpensesPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Amount (₹) *</Label>
+                <Label>Amount (Rs.) *</Label>
                 <Input type="number" min={0} value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} placeholder="0.00" />
               </div>
             </div>
@@ -158,7 +158,7 @@ export default function ExpensesPage() {
                 <Select value={form.payment_method} onValueChange={(v) => setForm((f) => ({ ...f, payment_method: v as PaymentMethod }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {(["cash", "upi", "card", "bank_transfer"] as PaymentMethod[]).map((m) => (
+                    {(["cash", "online"] as PaymentMethod[]).map((m) => (
                       <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
                     ))}
                   </SelectContent>

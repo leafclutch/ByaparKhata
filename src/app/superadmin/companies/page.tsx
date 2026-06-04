@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { getCompanies, setCompanyStatus } from "@/superadmin/services";
-import { formatINRCompact, getDaysRemaining } from "@/lib/utils";
+import { formatNPRCompact, getDaysRemaining } from "@/lib/utils";
 import { toast } from "sonner";
 import type { CompanyStat, CompanyStatus } from "@/lib/types";
 
@@ -34,7 +34,7 @@ export default function SACompaniesPage() {
     return companies.filter((c) => {
       const matchTab = tab === "all" || c.company_status === tab;
       const q = search.toLowerCase();
-      const matchSearch = !q || c.name.toLowerCase().includes(q) || (c.slug ?? "").toLowerCase().includes(q) || (c.gst_number ?? "").toLowerCase().includes(q);
+      const matchSearch = !q || c.name.toLowerCase().includes(q) || (c.slug ?? "").toLowerCase().includes(q) || (c.pan_vat_number ?? "").toLowerCase().includes(q);
       return matchTab && matchSearch;
     });
   }, [companies, tab, search]);
@@ -83,10 +83,10 @@ export default function SACompaniesPage() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
+        <div className="overflow-auto scrollbar-thin scrollbar-thumb-slate-200 max-h-[65vh]">
+          <table className="w-full text-sm relative border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-slate-100 bg-slate-50">
                 {["Company", "Plan", "Status", "Subscription End", "Users", "Revenue", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
@@ -111,7 +111,7 @@ export default function SACompaniesPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-600">{c.users_count}</td>
-                    <td className="px-4 py-3 text-slate-700 font-medium">{formatINRCompact(c.total_sales_value)}</td>
+                    <td className="px-4 py-3 text-slate-700 font-medium">{formatNPRCompact(c.total_sales_value)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <Link href={`/superadmin/companies/${c.id}`} className="px-2.5 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors">View</Link>

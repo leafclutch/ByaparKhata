@@ -10,7 +10,7 @@ import {
   Legend,
 } from "recharts";
 import type { CategoryBreakdown } from "@/lib/types";
-import { formatINRCompact } from "@/lib/utils";
+import { formatNPRCompact } from "@/lib/utils";
 
 interface ExpenseDonutChartProps {
   data: CategoryBreakdown[];
@@ -26,7 +26,7 @@ const CustomTooltip = ({ active, payload }: any) => {
         <div className="w-3 h-3 rounded-full" style={{ background: item.payload.color }} />
         <span className="font-semibold text-slate-800">{item.name}</span>
       </div>
-      <p className="text-slate-500 mt-1">{formatINRCompact(item.value)}</p>
+      <p className="text-slate-500 mt-1">{formatNPRCompact(item.value)}</p>
     </div>
   );
 };
@@ -74,7 +74,7 @@ export function ExpenseDonutChart({ data, height = 260 }: ExpenseDonutChartProps
             align="right"
             verticalAlign="middle"
             wrapperStyle={{ fontSize: 12, lineHeight: "24px" }}
-            formatter={(value) => <span className="text-slate-600">{value}</span>}
+            formatter={(value: any) => <span className="text-slate-600">{value}</span>}
           />
         </PieChart>
       </ResponsiveContainer>

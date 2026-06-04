@@ -7,7 +7,7 @@ import { RevenueAreaChart } from "@/components/charts/RevenueAreaChart";
 import { ExpenseDonutChart } from "@/components/charts/ExpenseDonutChart";
 import { useAuth } from "@/hooks/useAuth";
 import { getMonthlyRevenue, getExpenseBreakdown } from "@/lib/services/analytics";
-import { formatINR, formatINRCompact } from "@/lib/utils";
+import { formatNPR, formatNPRCompact } from "@/lib/utils";
 import type { MonthlyData, CategoryBreakdown } from "@/lib/types";
 
 export default function ProfitLossPage() {
@@ -87,7 +87,7 @@ export default function ProfitLossPage() {
                         {Math.abs(change)}%
                       </span>
                       <span className={`text-sm ${isLast ? "font-bold text-slate-900 text-base" : "font-medium text-slate-800"}`}>
-                        {item.positive ? "" : "−"}{formatINR(item.value)}
+                        {item.positive ? "" : "−"}{formatNPR(item.value)}
                       </span>
                     </div>
                   </div>
@@ -153,11 +153,11 @@ export default function ProfitLossPage() {
               {plData.map((row) => (
                 <tr key={row.month} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3 font-medium text-slate-800">{row.month}</td>
-                  <td className="px-5 py-3 text-right text-slate-800">{formatINRCompact(row.revenue)}</td>
-                  <td className="px-5 py-3 text-right text-rose-600">{formatINRCompact(row.cogs)}</td>
-                  <td className="px-5 py-3 text-right text-slate-700">{formatINRCompact(row.grossProfit)}</td>
-                  <td className="px-5 py-3 text-right text-amber-600">{formatINRCompact(row.opex)}</td>
-                  <td className="px-5 py-3 text-right font-bold text-emerald-700">{formatINRCompact(row.netProfit)}</td>
+                  <td className="px-5 py-3 text-right text-slate-800">{formatNPRCompact(row.revenue)}</td>
+                  <td className="px-5 py-3 text-right text-rose-600">{formatNPRCompact(row.cogs)}</td>
+                  <td className="px-5 py-3 text-right text-slate-700">{formatNPRCompact(row.grossProfit)}</td>
+                  <td className="px-5 py-3 text-right text-amber-600">{formatNPRCompact(row.opex)}</td>
+                  <td className="px-5 py-3 text-right font-bold text-emerald-700">{formatNPRCompact(row.netProfit)}</td>
                   <td className="px-5 py-3 text-right">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${row.margin >= 25 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                       {row.margin}%

@@ -7,19 +7,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatINR(amount: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
+export function formatNPR(amount: number): string {
+  return "Rs. " + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(amount);
 }
 
-export function formatINRCompact(amount: number): string {
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return formatINR(amount);
+export function formatNPRCompact(amount: number): string {
+  if (amount >= 10000000) return `Rs. ${(amount / 10000000).toFixed(1)}Cr`;
+  if (amount >= 100000) return `Rs. ${(amount / 100000).toFixed(1)}L`;
+  if (amount >= 1000) return `Rs. ${(amount / 1000).toFixed(1)}K`;
+  return formatNPR(amount);
 }
 
 export function formatDate(dateStr: string, fmt = "dd MMM yyyy"): string {
@@ -89,23 +85,20 @@ export function generateInvoiceNumber(): string {
   const year = now.getFullYear().toString().slice(2);
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const random = Math.floor(Math.random() * 9000) + 1000;
-  return `VK-${year}${month}-${random}`;
+  return `HH-${year}${month}-${random}`;
 }
 
 export function calculateCartTotal(
   items: Array<{ quantity: number; unit_price: number; discount: number }>,
-  orderDiscount = 0,
-  taxRate = 18
+  orderDiscount = 0
 ) {
   const subtotal = items.reduce((sum, item) => {
     const lineTotal = item.quantity * item.unit_price - item.discount;
     return sum + lineTotal;
   }, 0);
   const totalDiscount = items.reduce((s, i) => s + i.discount, 0) + orderDiscount;
-  const taxableAmount = subtotal - orderDiscount;
-  const taxAmount = (taxableAmount * taxRate) / 100;
-  const grandTotal = taxableAmount + taxAmount;
-  return { subtotal, totalDiscount, taxAmount, grandTotal };
+  const grandTotal = Math.max(0, subtotal - orderDiscount);
+  return { subtotal, totalDiscount, grandTotal };
 }
 
 export function slugify(text: string): string {
@@ -115,11 +108,60 @@ export function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+export type DatePeriod = "today" | "yesterday" | "7days" | "30days" | "month" | "all" | "custom";
+
+export function getDateRange(period: DatePeriod, customFrom?: string, customTo?: string): { from: string; to: string } {
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  switch (period) {
+    case "today":
+      return { from: today, to: today };
+    case "yesterday": {
+      const d = new Date(now); d.setDate(d.getDate() - 1);
+      const y = d.toISOString().split("T")[0];
+      return { from: y, to: y };
+    }
+    case "7days": {
+      const d = new Date(now); d.setDate(d.getDate() - 6);
+      return { from: d.toISOString().split("T")[0], to: today };
+    }
+    case "30days": {
+      const d = new Date(now); d.setDate(d.getDate() - 29);
+      return { from: d.toISOString().split("T")[0], to: today };
+    }
+    case "month": {
+      const d = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: d.toISOString().split("T")[0], to: today };
+    }
+    case "custom":
+      return { from: customFrom ?? "", to: customTo ?? "" };
+    default:
+      return { from: "", to: "" };
+  }
+}
+
+export function downloadCSV(rows: Record<string, string | number>[], filename: string) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const lines = rows.map((r) =>
+    headers.map((h) => `"${String(r[h] ?? "").replace(/"/g, '""')}"`).join(",")
+  );
+  const csv = "﻿" + [headers.join(","), ...lines].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}-${new Date().toISOString().split("T")[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
-  upi: "UPI / QR",
-  card: "Card",
-  bank_transfer: "Bank Transfer",
+  online: "Online",
+  mixed: "Cash + Online",
 };
 
 export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {

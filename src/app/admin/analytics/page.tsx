@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getMonthlyRevenue, getTopProducts } from "@/lib/services/analytics";
 import { getSales } from "@/lib/services/sales";
 import { getCompanyTeam } from "@/lib/services/company";
-import { formatINR, formatDate } from "@/lib/utils";
+import { formatNPR, formatDate } from "@/lib/utils";
 import type { MonthlyData, ProductStat, AppUser, Sale } from "@/lib/types";
 
 const topProductColumns = [
@@ -24,7 +24,7 @@ const topProductColumns = [
   },
   { key: "name", header: "Product", render: (r: ProductStat) => <span className="text-sm font-medium text-slate-800">{r.name}</span> },
   { key: "units_sold", header: "Units", render: (r: ProductStat) => <span className="text-sm text-slate-600">{r.units_sold}</span> },
-  { key: "total_revenue", header: "Revenue", render: (r: ProductStat) => <span className="text-sm font-semibold text-emerald-700">{formatINR(r.total_revenue)}</span> },
+  { key: "total_revenue", header: "Revenue", render: (r: ProductStat) => <span className="text-sm font-semibold text-emerald-700">{formatNPR(r.total_revenue)}</span> },
   {
     key: "percentage", header: "Share",
     render: (r: ProductStat) => (
@@ -123,7 +123,7 @@ export default function AnalyticsPage() {
                     <p className="text-xs text-slate-400">{stat.sales_count} sales · Last active {formatDate(stat.last_active)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-emerald-700">{formatINR(stat.total_revenue)}</p>
+                    <p className="text-sm font-bold text-emerald-700">{formatNPR(stat.total_revenue)}</p>
                     <p className="text-xs text-slate-400">revenue</p>
                   </div>
                 </div>

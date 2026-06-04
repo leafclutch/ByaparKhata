@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ShieldCheck, Zap, BarChart3, Package, ArrowRight,
-  Eye, EyeOff, CheckCircle2,
+  Eye, EyeOff,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { Input } from "@/components/ui/input";
@@ -13,14 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { IS_DEMO_MODE } from "@/lib/env";
 
 type Role = "admin" | "operator";
-
-const DEMO_CREDS: Record<Role, { email: string; password: string }> = {
-  admin: { email: "admin@nexusretail.in", password: "demo123456" },
-  operator: { email: "operator@nexusretail.in", password: "demo123456" },
-};
 
 const features = [
   { icon: BarChart3, text: "Real-time business analytics" },
@@ -32,36 +26,19 @@ const features = [
 export default function LoginPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>("admin");
-  const [email, setEmail] = useState(IS_DEMO_MODE ? DEMO_CREDS.admin.email : "");
-  const [password, setPassword] = useState(IS_DEMO_MODE ? DEMO_CREDS.admin.password : "");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function handleRoleSwitch(r: Role) {
     setRole(r);
-    if (IS_DEMO_MODE) {
-      setEmail(DEMO_CREDS[r].email);
-      setPassword(DEMO_CREDS[r].password);
-    }
   }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
-    if (IS_DEMO_MODE) {
-      await new Promise((res) => setTimeout(res, 800));
-      if (email === DEMO_CREDS[role].email && password === DEMO_CREDS[role].password) {
-        toast.success(`Welcome back! Signing in as ${role === "admin" ? "Admin" : "Operator"}…`);
-        setTimeout(() => router.push(role === "admin" ? "/admin" : "/operator"), 600);
-      } else {
-        toast.error("Invalid credentials. Use the demo credentials shown below.");
-        setLoading(false);
-      }
-      return;
-    }
-
-    // Real Supabase auth
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
@@ -111,10 +88,10 @@ export default function LoginPage() {
               className="w-12 h-12 rounded-2xl flex items-center justify-center"
               style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)" }}
             >
-              <span className="text-white font-black text-lg tracking-tight">VK</span>
+              <span className="text-white font-black text-lg tracking-tight">HH</span>
             </div>
             <div>
-              <div className="text-white font-bold text-xl tracking-tight">ByaparKhata</div>
+              <div className="text-white font-bold text-xl tracking-tight">HamroHisab</div>
               <div className="text-indigo-300 text-xs">by Leafclutch Technologies</div>
             </div>
           </div>
@@ -132,7 +109,7 @@ export default function LoginPage() {
             <span className="text-indigo-200">Simplified.</span>
           </motion.h1>
           <p className="text-indigo-200 text-base mb-10 leading-relaxed max-w-sm">
-            The modern inventory & billing platform built for growing Indian businesses.
+            The modern inventory & billing platform built for growing Nepali businesses.
           </p>
 
           <div className="space-y-3">
@@ -195,7 +172,7 @@ export default function LoginPage() {
                       : "text-slate-500 hover:text-slate-700"
                   )}
                 >
-                  {r === "admin" ? "🛡 Admin" : "⚡ Operator"}
+                  {r === "admin" ? "Admin" : "Operator"}
                 </motion.button>
               ))}
             </div>
@@ -268,23 +245,10 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Demo credentials — only shown in demo mode */}
-            {IS_DEMO_MODE && (
-              <div className="mt-5 p-3.5 bg-brand-50 rounded-xl border border-brand-100">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-brand-600" />
-                  <span className="text-xs font-semibold text-brand-700">Demo credentials pre-filled</span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Email: <code className="text-slate-700">{DEMO_CREDS[role].email}</code><br />
-                  Password: <code className="text-slate-700">{DEMO_CREDS[role].password}</code>
-                </p>
-              </div>
-            )}
           </div>
 
           <p className="text-center text-xs text-slate-400 mt-5">
-            © 2026 Leafclutch Technologies · ByaparKhata v1.0
+            © 2026 Leafclutch Technologies · HamroHisab v1.0
           </p>
         </motion.div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Building2, Users, TrendingUp, IndianRupee, AlertTriangle, XCircle } from "lucide-react";
+import { Building2, Users, TrendingUp, Banknote, AlertTriangle, XCircle } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
@@ -10,7 +10,7 @@ import {
 import { KPICard } from "@/components/shared/KPICard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { getPlatformKPIs, getCompanies, getSubscriptionRenewals, getCompanyGrowth } from "@/superadmin/services";
-import { formatINR, formatINRCompact, getDaysRemaining } from "@/lib/utils";
+import { formatNPR, formatNPRCompact, getDaysRemaining } from "@/lib/utils";
 import type { PlatformKPIs, CompanyStat, SubscriptionRenewal, CompanyGrowthPoint } from "@/lib/types";
 import Link from "next/link";
 
@@ -45,7 +45,7 @@ export default function SuperadminDashboardPage() {
           <KPICard title="Total Companies" value={kpis.total_companies} icon={Building2} colorScheme="indigo" format="number" index={0} />
           <KPICard title="Active Companies" value={kpis.active_companies} icon={Building2} colorScheme="emerald" format="number" index={1} />
           <KPICard title="Expired Companies" value={kpis.expired_companies} icon={XCircle} colorScheme="rose" format="number" index={2} />
-          <KPICard title="Total Revenue" value={kpis.total_revenue} icon={IndianRupee} colorScheme="violet" format="currency" index={3} />
+          <KPICard title="Total Revenue" value={kpis.total_revenue} icon={Banknote} colorScheme="violet" format="currency" index={3} />
           <KPICard title="Active Users" value={kpis.active_users} icon={Users} colorScheme="cyan" format="number" index={4} />
           <KPICard title="Expiring Soon" value={kpis.expiring_soon} icon={AlertTriangle} colorScheme="amber" format="number" index={5} />
         </div>
@@ -65,8 +65,8 @@ export default function SuperadminDashboardPage() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => formatINRCompact(v)} />
-              <Tooltip formatter={(v) => [formatINR(Number(v)), "Revenue"]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v: any) => formatNPRCompact(Number(v))} />
+              <Tooltip formatter={(v: any) => [formatNPR(Number(v)), "Revenue"]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
               <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} fill="url(#revGrad)" />
             </AreaChart>
           </ResponsiveContainer>

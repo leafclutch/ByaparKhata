@@ -1,13 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { IS_DEMO_MODE } from "@/lib/env";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // Demo mode — allow all routes, auth handled client-side
-  if (IS_DEMO_MODE) return NextResponse.next();
 
   // ── Zone 1: Super Admin routes ──────────────────────────────────────────────
   // Completely separate from company routes. SA users can never reach /admin or /operator.

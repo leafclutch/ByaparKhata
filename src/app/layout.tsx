@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ByaparKhata — Business Operations Simplified",
+  title: "HamroHisab — Business Operations Simplified",
   description:
     "Modern inventory & business management platform by Leafclutch Technologies",
   icons: { icon: "/favicon.ico" },

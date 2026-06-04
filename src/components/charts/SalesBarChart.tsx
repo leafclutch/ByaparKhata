@@ -23,7 +23,7 @@ interface SalesBarChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   const fmt = (v: number) =>
-    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(v);
+    "Rs. " + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(v);
   return (
     <div className="bg-white border border-slate-100 rounded-xl shadow-lg p-3 text-sm">
       <p className="font-semibold text-slate-700 mb-2">{label}</p>
@@ -53,10 +53,10 @@ export function SalesBarChart({ data, height = 260, showPurchases = true, showEx
             tick={{ fontSize: 11, fill: "#94a3b8" }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`}
+            tickFormatter={(v: any) => `Rs. ${(Number(v) / 100000).toFixed(0)}L`}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} formatter={(v) => <span className="text-slate-600 capitalize">{v}</span>} />
+          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} formatter={(v: any) => <span className="text-slate-600 capitalize">{v}</span>} />
           <Bar dataKey="sales" fill="#4f46e5" radius={[4, 4, 0, 0]} maxBarSize={36} />
           {showPurchases && <Bar dataKey="purchases" fill="#06b6d4" radius={[4, 4, 0, 0]} maxBarSize={36} />}
           {showExpenses && <Bar dataKey="expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={36} />}

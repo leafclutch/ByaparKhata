@@ -1,9 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
 import type { DashboardKPIs, MonthlyData, CategoryBreakdown, ProductStat } from "@/lib/types";
-import { IS_DEMO_MODE } from "@/lib/env";
-import {
-  DEMO_KPIS, DEMO_MONTHLY_DATA, DEMO_EXPENSE_BREAKDOWN, DEMO_TOP_PRODUCTS,
-} from "@/lib/mock-data";
 
 function monthRange(monthsAgo: number) {
   const d = new Date();
@@ -19,8 +15,6 @@ function shortMonth(iso: string) {
 }
 
 export async function getDashboardKPIs(companyId: string): Promise<DashboardKPIs> {
-  if (IS_DEMO_MODE) return DEMO_KPIS;
-
   const supabase = createClient();
   const { start: thisStart, end: thisEnd } = monthRange(0);
   const { start: prevStart, end: prevEnd } = monthRange(1);
@@ -33,7 +27,7 @@ export async function getDashboardKPIs(companyId: string): Promise<DashboardKPIs
       supabase.from("purchases").select("total_cost").eq("company_id", companyId).gte("purchased_at", prevStart).lte("purchased_at", prevEnd),
       supabase.from("expenses").select("amount").eq("company_id", companyId).gte("expense_date", thisStart.slice(0, 10)).lte("expense_date", thisEnd.slice(0, 10)),
       supabase.from("expenses").select("amount").eq("company_id", companyId).gte("expense_date", prevStart.slice(0, 10)).lte("expense_date", prevEnd.slice(0, 10)),
-      supabase.from("products").select("quantity, purchase_price").eq("company_id", companyId).eq("is_active", true),
+      supabase.from("products").select("quantity, purchase_price, min_stock").eq("company_id", companyId).eq("is_active", true),
     ]);
 
   const sum = (rows: { [k: string]: number }[], key: string) =>
@@ -50,6 +44,12 @@ export async function getDashboardKPIs(companyId: string): Promise<DashboardKPIs
   const netProfit = totalSales - totalPurchases - totalExpenses;
   const prevNetProfit = prevTotalSales - prevTotalPurchases - prevTotalExpenses;
   const inventoryValue = (products.data ?? []).reduce((s, p) => s + p.quantity * p.purchase_price, 0);
+  const totalProducts = products.data?.length ?? 0;
+  const lowStockCount = products.data?.filter((p) => p.quantity > 0 && p.quantity <= p.min_stock).length ?? 0;
+  const outOfStockCount = products.data?.filter((p) => p.quantity <= 0).length ?? 0;
+
+  const catStats = await getCategoryAnalytics(companyId);
+  const topCat = catStats.sort((a, b) => b.total_sales - a.total_sales)[0]?.name;
 
   return {
     total_sales: totalSales,
@@ -61,34 +61,35 @@ export async function getDashboardKPIs(companyId: string): Promise<DashboardKPIs
     purchases_change: pct(totalPurchases, prevTotalPurchases),
     expenses_change: pct(totalExpenses, prevTotalExpenses),
     profit_change: pct(netProfit, prevNetProfit),
+    total_products: totalProducts,
+    low_stock_count: lowStockCount,
+    out_of_stock_count: outOfStockCount,
+    top_category: topCat,
   };
 }
 
 export async function getMonthlyRevenue(companyId: string, months = 6): Promise<MonthlyData[]> {
-  if (IS_DEMO_MODE) return DEMO_MONTHLY_DATA;
-
   const supabase = createClient();
-  const results: MonthlyData[] = [];
 
-  for (let i = months - 1; i >= 0; i--) {
-    const { start, end } = monthRange(i);
-    const [sales, purchases, expenses] = await Promise.all([
-      supabase.from("sales").select("grand_total").eq("company_id", companyId).gte("created_at", start).lte("created_at", end),
-      supabase.from("purchases").select("total_cost").eq("company_id", companyId).gte("purchased_at", start).lte("purchased_at", end),
-      supabase.from("expenses").select("amount").eq("company_id", companyId).gte("expense_date", start.slice(0, 10)).lte("expense_date", end.slice(0, 10)),
-    ]);
-    const s = (sales.data ?? []).reduce((acc, r) => acc + r.grand_total, 0);
-    const p = (purchases.data ?? []).reduce((acc, r) => acc + r.total_cost, 0);
-    const e = (expenses.data ?? []).reduce((acc, r) => acc + r.amount, 0);
-    results.push({ month: shortMonth(start), sales: s, purchases: p, expenses: e, profit: s - p - e });
-  }
+  const monthData = await Promise.all(
+    Array.from({ length: months }, (_, i) => months - 1 - i).map(async (i) => {
+      const { start, end } = monthRange(i);
+      const [sales, purchases, expenses] = await Promise.all([
+        supabase.from("sales").select("grand_total").eq("company_id", companyId).gte("created_at", start).lte("created_at", end),
+        supabase.from("purchases").select("total_cost").eq("company_id", companyId).gte("purchased_at", start).lte("purchased_at", end),
+        supabase.from("expenses").select("amount").eq("company_id", companyId).gte("expense_date", start.slice(0, 10)).lte("expense_date", end.slice(0, 10)),
+      ]);
+      const s = (sales.data ?? []).reduce((acc, r) => acc + r.grand_total, 0);
+      const p = (purchases.data ?? []).reduce((acc, r) => acc + r.total_cost, 0);
+      const e = (expenses.data ?? []).reduce((acc, r) => acc + r.amount, 0);
+      return { month: shortMonth(start), sales: s, purchases: p, expenses: e, profit: s - p - e };
+    })
+  );
 
-  return results;
+  return monthData;
 }
 
 export async function getExpenseBreakdown(companyId: string): Promise<CategoryBreakdown[]> {
-  if (IS_DEMO_MODE) return DEMO_EXPENSE_BREAKDOWN;
-
   const supabase = createClient();
   const { start } = monthRange(0);
   const { data, error } = await supabase
@@ -115,9 +116,53 @@ export async function getExpenseBreakdown(companyId: string): Promise<CategoryBr
   }));
 }
 
-export async function getTopProducts(companyId: string, limit = 5): Promise<ProductStat[]> {
-  if (IS_DEMO_MODE) return DEMO_TOP_PRODUCTS;
+export interface CategoryStat {
+  id: string;
+  name: string;
+  product_count: number;
+  inventory_value: number;
+  total_sales: number;
+  total_purchases: number;
+}
 
+export async function getCategoryAnalytics(companyId: string): Promise<CategoryStat[]> {
+  const supabase = createClient();
+
+  const [categories, products, sales, purchases] = await Promise.all([
+    supabase.from("categories").select("id, name").eq("company_id", companyId),
+    supabase.from("products").select("id, category_id, quantity, purchase_price").eq("company_id", companyId),
+    supabase.from("sale_items").select("product_id, line_total, sale:sales!inner(company_id)").eq("sale.company_id", companyId),
+    supabase.from("purchases").select("product_id, total_cost").eq("company_id", companyId),
+  ]);
+
+  const stats: Record<string, CategoryStat> = {};
+  (categories.data ?? []).forEach((c) => {
+    stats[c.id] = { id: c.id, name: c.name, product_count: 0, inventory_value: 0, total_sales: 0, total_purchases: 0 };
+  });
+
+  const productToCat: Record<string, string> = {};
+  (products.data ?? []).forEach((p) => {
+    if (p.category_id && stats[p.category_id]) {
+      productToCat[p.id] = p.category_id;
+      stats[p.category_id].product_count++;
+      stats[p.category_id].inventory_value += p.quantity * p.purchase_price;
+    }
+  });
+
+  (sales.data ?? []).forEach((s) => {
+    const cid = productToCat[s.product_id];
+    if (cid) stats[cid].total_sales += s.line_total;
+  });
+
+  (purchases.data ?? []).forEach((p) => {
+    const cid = productToCat[p.product_id];
+    if (cid) stats[cid].total_purchases += p.total_cost;
+  });
+
+  return Object.values(stats);
+}
+
+export async function getTopProducts(companyId: string, limit = 5): Promise<ProductStat[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("sale_items")

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { CreditCard } from "lucide-react";
 import { getSubscriptionRenewals, getCompanies } from "@/superadmin/services";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { formatINR, getDaysRemaining } from "@/lib/utils";
+import { formatNPR, getDaysRemaining } from "@/lib/utils";
 import Link from "next/link";
 import type { SubscriptionRenewal, CompanyStat } from "@/lib/types";
 
@@ -42,7 +42,7 @@ export default function SASubscriptionsPage() {
           { label: "Active Subscriptions", value: totalActive, color: "text-emerald-600" },
           { label: "Expiring This Month", value: expiringSoon.length, color: "text-amber-600" },
           { label: "Expired", value: totalExpired, color: "text-rose-600" },
-          { label: "Total Renewal Revenue", value: formatINR(totalRevenue), color: "text-indigo-600" },
+          { label: "Total Renewal Revenue", value: formatNPR(totalRevenue), color: "text-indigo-600" },
         ].map((k) => (
           <div key={k.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
             <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
@@ -106,9 +106,9 @@ export default function SASubscriptionsPage() {
                   <td className="px-5 py-3"><StatusBadge status={r.plan} /></td>
                   <td className="px-5 py-3 text-xs text-slate-600">{r.start_date}</td>
                   <td className="px-5 py-3 text-xs text-slate-600">{r.end_date}</td>
-                  <td className="px-5 py-3 font-semibold text-slate-800">{formatINR(r.amount)}</td>
+                  <td className="px-5 py-3 font-semibold text-slate-800">{formatNPR(r.amount)}</td>
                   <td className="px-5 py-3 text-xs text-slate-500">{r.renewed_by}</td>
-                  <td className="px-5 py-3 text-xs text-slate-400">{new Date(r.created_at).toLocaleDateString("en-IN")}</td>
+                  <td className="px-5 py-3 text-xs text-slate-400">{new Date(r.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
               {!loading && renewals.length === 0 && (

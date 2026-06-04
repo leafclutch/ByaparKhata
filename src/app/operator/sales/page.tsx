@@ -1,207 +1,378 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Search, ShoppingCart, ArrowRight } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
+import { Plus, Eye, Trash2, Printer, Search, Download, ChevronLeft, ChevronRight, RotateCcw, FileSpreadsheet } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { getProducts } from "@/lib/services/products";
-import { createSale } from "@/lib/services/sales";
-import { formatINR, calculateCartTotal, PAYMENT_METHOD_LABELS } from "@/lib/utils";
-import type { Product, CartItem, PaymentMethod } from "@/lib/types";
+import { getSales, deleteSale } from "@/lib/services/sales";
+import { getCompanyTeam } from "@/lib/services/company";
+import { formatNPR, formatDateTime, PAYMENT_METHOD_LABELS, getDateRange, downloadCSV, cn } from "@/lib/utils";
+import type { Sale, AppUser, PaymentMethod } from "@/lib/types";
+import type { DatePeriod } from "@/lib/utils";
 
-export default function SalesPage() {
-  const router = useRouter();
+const PAGE_SIZE = 25;
+
+const PERIOD_LABELS: Record<DatePeriod, string> = {
+  today: "Today",
+  yesterday: "Yesterday",
+  "7days": "Last 7 Days",
+  "30days": "Last 30 Days",
+  month: "This Month",
+  all: "All Time",
+  custom: "Custom",
+};
+
+function SalesHistoryContent() {
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
+
+  const initPeriod = (searchParams.get("period") as DatePeriod) ?? "month";
+  const [period, setPeriod] = useState<DatePeriod>(initPeriod);
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  const [allSales, setAllSales] = useState<Sale[]>([]);
+  const [team, setTeam] = useState<AppUser[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [customerName, setCustomerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [discount, setDiscount] = useState("0");
-  const [saving, setSaving] = useState(false);
+  const [filterOperator, setFilterOperator] = useState("all");
+  const [filterPayment, setFilterPayment] = useState("all");
+  const [page, setPage] = useState(1);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    getProducts(user.company_id).then(setProducts).catch(() => toast.error("Failed to load products."));
-  }, [user]);
-
-  const filteredProducts = products.filter(
-    (p) => p.is_active && p.quantity > 0 &&
-      (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  function addToCart(product: Product) {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.product.id === product.id
-            ? { ...i, quantity: i.quantity + 1, line_total: (i.quantity + 1) * i.unit_price - i.discount }
-            : i
-        );
-      }
-      return [...prev, { product, quantity: 1, unit_price: product.selling_price, discount: 0, line_total: product.selling_price }];
-    });
-    setSearch("");
-  }
-
-  function updateQty(productId: string, qty: number) {
-    if (qty <= 0) { setCart((prev) => prev.filter((i) => i.product.id !== productId)); return; }
-    setCart((prev) => prev.map((i) => i.product.id === productId ? { ...i, quantity: qty, line_total: qty * i.unit_price - i.discount } : i));
-  }
-
-  function updateLineDiscount(productId: string, disc: number) {
-    setCart((prev) => prev.map((i) => i.product.id === productId ? { ...i, discount: disc, line_total: i.quantity * i.unit_price - disc } : i));
-  }
-
-  const totals = calculateCartTotal(cart, Number(discount), 18);
-
-  async function handleSave() {
-    if (cart.length === 0) { toast.error("Add at least one product."); return; }
-    if (!user) return;
-    setSaving(true);
+  const loadData = useCallback(async () => {
+    if (!user?.company_id) return;
+    setLoading(true);
+    const { from, to } = getDateRange(period, customFrom, customTo);
     try {
-      const sale = await createSale(
-        { company_id: user.company_id, operator_id: user.id, customer_name: customerName || undefined, payment_method: paymentMethod, discount: Number(discount), tax_rate: 18 },
-        cart
-      );
-      toast.success(`Sale recorded — Invoice ${sale.invoice_number}`);
-      router.push(`/operator/billing?sale=${sale.id}&invoice=${sale.invoice_number}&total=${totals.grandTotal}`);
+      const [sales, members] = await Promise.all([
+        getSales(user.company_id, {
+          from_date: from || undefined,
+          to_date: to || undefined,
+        }),
+        getCompanyTeam(user.company_id),
+      ]);
+      setAllSales(sales);
+      setTeam(members);
     } catch {
-      toast.error("Failed to record sale.");
-      setSaving(false);
+      toast.error("Failed to load sales.");
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.company_id, period, customFrom, customTo]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const filtered = useMemo(() => {
+    return allSales.filter((s) => {
+      if (filterOperator !== "all" && s.operator_id !== filterOperator) return false;
+      if (filterPayment !== "all" && s.payment_method !== filterPayment) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!s.invoice_number.toLowerCase().includes(q) &&
+            !(s.customer_name ?? "").toLowerCase().includes(q) &&
+            !(s.notes ?? "").toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [allSales, filterOperator, filterPayment, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalRevenue = filtered.reduce((s, r) => s + r.grand_total, 0);
+  const avgSale = filtered.length ? totalRevenue / filtered.length : 0;
+
+  const hasFilters = search || filterOperator !== "all" || filterPayment !== "all";
+
+  function resetFilters() {
+    setSearch(""); setFilterOperator("all"); setFilterPayment("all"); setPage(1);
+  }
+
+  function handlePeriod(p: DatePeriod) {
+    setPeriod(p); setPage(1);
+  }
+
+  function handleExportCSV() {
+    if (!filtered.length) { toast.error("Nothing to export."); return; }
+    downloadCSV(
+      filtered.map((s) => ({
+        "Invoice": s.invoice_number,
+        "Customer": s.customer_name || "Walk-in",
+        "Subtotal (Rs.)": s.subtotal,
+        "Discount (Rs.)": s.discount,
+        "Total (Rs.)": s.grand_total,
+        "Payment": PAYMENT_METHOD_LABELS[s.payment_method] || s.payment_method,
+        "Created By": s.operator?.full_name || "",
+        "Date": formatDateTime(s.created_at),
+      })),
+      "sales-history"
+    );
+  }
+
+  async function handleDelete() {
+    if (!saleToDelete) return;
+    setDeleting(true);
+    try {
+      const actor = user ? { id: user.id, name: user.full_name, role: user.role } : undefined;
+      await deleteSale(saleToDelete.id, actor);
+      setAllSales((prev) => prev.filter((s) => s.id !== saleToDelete.id));
+      toast.success(`Sale ${saleToDelete.invoice_number} deleted.`);
+      setSaleToDelete(null);
+    } catch {
+      toast.error("Failed to delete sale.");
+    } finally {
+      setDeleting(false);
     }
   }
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-bold text-slate-900">New Sale</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Search for products and build your cart</p>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Sales History</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Browse, filter and export all sales transactions</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 gap-1.5 text-xs">
+            <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV
+          </Button>
+          <Link href="/operator/sales/new">
+            <Button className="h-9 gap-1.5 text-sm bg-brand-600 hover:bg-brand-700">
+              <Plus className="w-4 h-4" /> New Sale
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: product search + cart */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products by name or SKU…" className="pl-9 h-10 text-sm" />
-            </div>
+      {/* Period selector + filters */}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+        {/* Period pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {(["today", "yesterday", "7days", "30days", "month", "all", "custom"] as DatePeriod[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => handlePeriod(p)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                period === p
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              )}
+            >
+              {PERIOD_LABELS[p]}
+            </button>
+          ))}
+        </div>
 
-            {search.length > 0 && (
-              <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-50">
-                {filteredProducts.slice(0, 6).map((product) => (
-                  <button key={product.id} onClick={() => addToCart(product)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-brand-50 transition-colors text-left">
-                    <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0">
-                      <ShoppingCart className="w-4 h-4 text-brand-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{product.name}</p>
-                      <p className="text-xs text-slate-400">{product.sku} · {product.quantity} in stock</p>
-                    </div>
-                    <span className="text-sm font-bold text-slate-800 flex-shrink-0">{formatINR(product.selling_price)}</span>
-                    <Plus className="w-4 h-4 text-brand-600 flex-shrink-0" />
-                  </button>
-                ))}
-                {filteredProducts.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">No products found</p>}
-              </div>
-            )}
+        {/* Custom date inputs */}
+        {period === "custom" && (
+          <div className="flex items-center gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">From</Label>
+              <Input type="date" value={customFrom} onChange={(e) => { setCustomFrom(e.target.value); setPage(1); }} className="h-8 text-xs w-36" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">To</Label>
+              <Input type="date" value={customTo} onChange={(e) => { setCustomTo(e.target.value); setPage(1); }} className="h-8 text-xs w-36" />
+            </div>
           </div>
+        )}
 
-          {/* Cart */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-50 flex items-center justify-between">
-              <span className="text-sm font-semibold text-slate-800">Cart</span>
-              <span className="text-xs text-slate-400">{cart.length} item{cart.length !== 1 ? "s" : ""}</span>
+        {/* Search + dropdowns */}
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Input
+              placeholder="Invoice # or customer…"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-8 h-9 text-sm bg-slate-50"
+            />
+          </div>
+          <Select value={filterOperator} onValueChange={(v) => { setFilterOperator(v); setPage(1); }}>
+            <SelectTrigger className="h-9 text-sm w-44"><SelectValue placeholder="All Users" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Users</SelectItem>
+              {team.map((m) => <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterPayment} onValueChange={(v) => { setFilterPayment(v); setPage(1); }}>
+            <SelectTrigger className="h-9 text-sm w-40"><SelectValue placeholder="All Payments" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Payments</SelectItem>
+              {(["cash", "online", "card", "bank_transfer"] as PaymentMethod[]).map((m) => (
+                <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 gap-1 text-xs text-slate-500">
+              <RotateCcw className="w-3 h-3" /> Clear
+            </Button>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Summary strip */}
+      <div className="flex flex-wrap items-center gap-4 px-1">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="font-bold text-slate-900">{filtered.length}</span>
+          <span className="text-slate-500">sales</span>
+        </div>
+        <div className="w-px h-4 bg-slate-200" />
+        <div className="flex items-center gap-2 text-sm">
+          <span className="font-bold text-emerald-700">{formatNPR(totalRevenue)}</span>
+          <span className="text-slate-500">total</span>
+        </div>
+        {filtered.length > 0 && (
+          <>
+            <div className="w-px h-4 bg-slate-200" />
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-bold text-slate-700">{formatNPR(Math.round(avgSale))}</span>
+              <span className="text-slate-500">avg sale</span>
             </div>
-            {cart.length === 0 ? (
-              <div className="py-10 text-center">
-                <ShoppingCart className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                <p className="text-sm text-slate-400">No items in cart</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-50">
-                <AnimatePresence>
-                  {cart.map((item) => (
-                    <motion.div key={item.product.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="flex items-center gap-3 px-4 py-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-800 truncate">{item.product.name}</p>
-                        <p className="text-xs text-slate-400">{formatINR(item.unit_price)} / unit</p>
+          </>
+        )}
+        {loading && <span className="text-xs text-slate-400 animate-pulse">Loading…</span>}
+      </div>
+
+      {/* Table */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="overflow-auto scrollbar-thin scrollbar-thumb-slate-200 max-h-[58vh]">
+          <table className="w-full text-sm border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10">
+              <tr>
+                {["Invoice", "Customer", "Total", "Discount", "Payment", "Remarks", "Created By", "Date", ""].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading && (
+                <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-slate-400">Loading sales…</td></tr>
+              )}
+              {!loading && paginated.length === 0 && (
+                <tr><td colSpan={9} className="px-4 py-14 text-center">
+                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <Search className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-500">No sales found for this period</p>
+                </td></tr>
+              )}
+              {!loading && paginated.map((sale) => (
+                <tr key={sale.id} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="px-4 py-3.5">
+                    <code className="text-xs bg-brand-50 text-brand-700 px-2 py-1 rounded font-semibold">{sale.invoice_number}</code>
+                  </td>
+                  <td className="px-4 py-3.5 font-medium text-slate-800">{sale.customer_name || "Walk-in"}</td>
+                  <td className="px-4 py-3.5 font-bold text-slate-900">{formatNPR(sale.grand_total)}</td>
+                  <td className="px-4 py-3.5 text-slate-500">
+                    {sale.discount > 0 ? <span className="text-rose-600">−{formatNPR(sale.discount)}</span> : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    {sale.payment_method === "mixed" ? (
+                      <div>
+                        <StatusBadge status="mixed" />
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          {formatNPR(sale.cash_amount ?? 0)} / {formatNPR(sale.online_amount ?? 0)}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => updateQty(item.product.id, item.quantity - 1)} className="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold flex items-center justify-center">−</button>
-                        <span className="w-8 text-center text-sm font-semibold text-slate-800">{item.quantity}</span>
-                        <button onClick={() => updateQty(item.product.id, item.quantity + 1)} className="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold flex items-center justify-center">+</button>
-                      </div>
-                      <Input type="number" value={item.discount} onChange={(e) => updateLineDiscount(item.product.id, Number(e.target.value))} placeholder="Disc" className="w-20 h-7 text-xs text-center" min={0} />
-                      <span className="w-24 text-right text-sm font-bold text-slate-800 flex-shrink-0">{formatINR(item.line_total)}</span>
-                      <button onClick={() => setCart((prev) => prev.filter((i) => i.product.id !== item.product.id))} className="p-1 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                    ) : (
+                      <StatusBadge status={sale.payment_method as any} />
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5 max-w-[140px]">
+                    {sale.notes ? (
+                      <p className="text-xs text-slate-500 truncate" title={sale.notes}>{sale.notes}</p>
+                    ) : (
+                      <span className="text-slate-300 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5 text-xs text-slate-500">{sale.operator?.full_name ?? "—"}</td>
+                  <td className="px-4 py-3.5 text-xs text-slate-400 whitespace-nowrap">{formatDateTime(sale.created_at)}</td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/operator/billing?sale=${sale.id}`}>
+                        <button className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" title="View Invoice">
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
+                      </Link>
+                      <Link href={`/operator/sales/new?id=${sale.id}`}>
+                        <button className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" title="Edit">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </Link>
+                      <button onClick={() => setSaleToDelete(sale)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Delete">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
+
+      {/* Pagination */}
+      {filtered.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-slate-500">
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="h-8 w-8 p-0">
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-xs text-slate-600 px-3 py-1 bg-white border border-slate-200 rounded-lg">
+              {page} / {totalPages}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 w-8 p-0">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
         </div>
+      )}
 
-        {/* Right: bill preview */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm space-y-4">
-            <h3 className="text-sm font-semibold text-slate-800">Bill Details</h3>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Customer Name</Label>
-              <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Walk-in / Customer name" className="h-9 text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Payment Method</Label>
-              <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(["cash", "upi", "card", "bank_transfer"] as PaymentMethod[]).map((m) => (
-                    <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Order Discount (₹)</Label>
-              <Input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" className="h-9 text-sm" min={0} />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-slate-600"><span>Subtotal</span><span>{formatINR(totals.subtotal)}</span></div>
-              <div className="flex justify-between text-slate-600"><span>Discount</span><span className="text-rose-600">−{formatINR(totals.totalDiscount)}</span></div>
-              <div className="flex justify-between text-slate-600"><span>Tax (18%)</span><span>{formatINR(totals.taxAmount)}</span></div>
-              <div className="flex justify-between font-bold text-base text-slate-900 pt-2 border-t border-slate-100">
-                <span>Grand Total</span>
-                <span className="text-brand-700">{formatINR(totals.grandTotal)}</span>
-              </div>
-            </div>
-          </div>
-
-          <Button onClick={handleSave} disabled={saving || cart.length === 0} className="w-full h-11 bg-brand-600 hover:bg-brand-700 text-white font-semibold gap-2">
-            {saving ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                Processing…
-              </span>
-            ) : (
-              <>Record Sale <ArrowRight className="w-4 h-4" /></>
-            )}
-          </Button>
-        </div>
-      </div>
+      {/* Delete dialog */}
+      <Dialog open={!!saleToDelete} onOpenChange={() => setSaleToDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Sale</DialogTitle>
+            <DialogDescription>
+              Delete invoice <strong>{saleToDelete?.invoice_number}</strong>? Stock will be restored. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaleToDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+export default function SalesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-sm text-slate-400">Loading…</div>}>
+      <SalesHistoryContent />
+    </Suspense>
   );
 }
