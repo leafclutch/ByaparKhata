@@ -39,6 +39,8 @@ export interface CreatePurchaseInput {
   total_cost: number;
   invoice_number?: string;
   payment_method: string;
+  cash_amount?: number;
+  online_amount?: number;
   notes?: string;
 }
 

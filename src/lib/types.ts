@@ -126,6 +126,8 @@ export interface Purchase {
   total_cost: number;
   invoice_number?: string;
   payment_method: PaymentMethod;
+  cash_amount?: number;
+  online_amount?: number;
   notes?: string;
   purchased_at: string;
 }
