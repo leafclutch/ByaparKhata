@@ -28,13 +28,21 @@ const PERIOD_LABELS: Record<DatePeriod, string> = {
 };
 
 type PurchaseForm = {
-  supplier_name: string; product_id: string; quantity: string;
-  unit_cost: string; payment_method: PaymentMethod; invoice_number: string; remarks: string;
+  supplier_name: string;
+  product_id: string;
+  quantity: string;
+  unit_cost: string;
+  payment_method: PaymentMethod;
+  cash_amount: string;
+  online_amount: string;
+  invoice_number: string;
+  remarks: string;
 };
 
 const emptyForm: PurchaseForm = {
   supplier_name: "", product_id: "", quantity: "", unit_cost: "",
-  payment_method: "cash", invoice_number: "", remarks: "",
+  payment_method: "cash", cash_amount: "", online_amount: "",
+  invoice_number: "", remarks: "",
 };
 
 function PurchaseHistoryContent() {
@@ -113,15 +121,37 @@ function PurchaseHistoryContent() {
   const selectedProduct = products.find((p) => p.id === form.product_id);
   const productOptions = products.map((p) => ({ value: p.id, label: p.name, sublabel: p.sku }));
 
+  const totalCostCalc = Number(form.quantity) * Number(form.unit_cost) || 0;
+  const mixedCash = Number(form.cash_amount) || 0;
+  const mixedOnline = Number(form.online_amount) || 0;
+  const mixedBalance = form.payment_method === "mixed"
+    ? Math.round((mixedCash + mixedOnline - totalCostCalc) * 100) / 100
+    : 0;
+
   async function handleSave() {
     if (!form.supplier_name || !form.product_id || !form.quantity || !form.unit_cost) {
       toast.error("Fill in all required fields."); return;
     }
     if (!user) return;
+
+    const qty = Number(form.quantity);
+    const cost = Number(form.unit_cost);
+    const total = qty * cost;
+
+    if (form.payment_method === "mixed") {
+      if (mixedCash < 0 || mixedOnline < 0) {
+        toast.error("Amounts cannot be negative."); return;
+      }
+      if (mixedBalance !== 0) {
+        toast.error(
+          `Cash + Online must equal ${formatNPR(total)}. Difference: ${formatNPR(Math.abs(mixedBalance))}`
+        );
+        return;
+      }
+    }
+
     setSaving(true);
     try {
-      const qty = Number(form.quantity);
-      const cost = Number(form.unit_cost);
       const actor = { id: user.id, name: user.full_name, role: user.role };
       const created = await createPurchase({
         company_id: user.company_id,
@@ -131,17 +161,19 @@ function PurchaseHistoryContent() {
         product_name: selectedProduct?.name ?? "",
         quantity: qty,
         unit_cost: cost,
-        total_cost: qty * cost,
+        total_cost: total,
         invoice_number: form.invoice_number || undefined,
         payment_method: form.payment_method,
+        cash_amount: form.payment_method === "mixed" ? mixedCash : undefined,
+        online_amount: form.payment_method === "mixed" ? mixedOnline : undefined,
         notes: form.remarks || undefined,
       }, actor);
       setAllPurchases((prev) => [created, ...prev]);
       toast.success(`Purchase recorded — ${qty} × ${selectedProduct?.name}`);
       setDialogOpen(false);
       setForm(emptyForm);
-    } catch {
-      toast.error("Failed to record purchase.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to record purchase.");
     } finally {
       setSaving(false);
     }
@@ -174,6 +206,8 @@ function PurchaseHistoryContent() {
         "Unit Cost (Rs.)": p.unit_cost,
         "Total (Rs.)": p.total_cost,
         "Payment": PAYMENT_METHOD_LABELS[p.payment_method] || p.payment_method,
+        "Cash (Rs.)": p.cash_amount ?? "",
+        "Online (Rs.)": p.online_amount ?? "",
         "Created By": p.operator?.full_name || "",
         "Date": formatDate(p.purchased_at),
       })),
@@ -248,7 +282,7 @@ function PurchaseHistoryContent() {
             <SelectTrigger className="h-9 text-sm w-40"><SelectValue placeholder="All Payments" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Payments</SelectItem>
-              {(["cash", "online", "card", "bank_transfer"] as PaymentMethod[]).map((m) => (
+              {(["cash", "online", "mixed"] as PaymentMethod[]).map((m) => (
                 <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
               ))}
             </SelectContent>
@@ -305,7 +339,18 @@ function PurchaseHistoryContent() {
                   <td className="px-4 py-3.5 text-slate-600">{p.product_name}</td>
                   <td className="px-4 py-3.5 text-slate-700">×{p.quantity}</td>
                   <td className="px-4 py-3.5 font-bold text-rose-700">{formatNPR(p.total_cost)}</td>
-                  <td className="px-4 py-3.5"><StatusBadge status={p.payment_method as any} /></td>
+                  <td className="px-4 py-3.5">
+                    {p.payment_method === "mixed" ? (
+                      <div>
+                        <StatusBadge status="mixed" />
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          {formatNPR(p.cash_amount ?? 0)} / {formatNPR(p.online_amount ?? 0)}
+                        </p>
+                      </div>
+                    ) : (
+                      <StatusBadge status={p.payment_method as any} />
+                    )}
+                  </td>
                   <td className="px-4 py-3.5 text-xs text-slate-500">{p.operator?.full_name ?? "—"}</td>
                   <td className="px-4 py-3.5 text-xs text-slate-400 whitespace-nowrap">{formatDate(p.purchased_at)}</td>
                   <td className="px-4 py-3.5">
@@ -339,7 +384,7 @@ function PurchaseHistoryContent() {
       )}
 
       {/* New Purchase Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setForm(emptyForm); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>New Purchase</DialogTitle>
@@ -372,27 +417,79 @@ function PurchaseHistoryContent() {
               <Label>Unit Cost (Rs.) *</Label>
               <Input type="number" min={0} value={form.unit_cost} onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))} placeholder="0.00" />
             </div>
-            <div className="space-y-1.5">
+
+            {/* Payment method selector */}
+            <div className="col-span-2 space-y-2">
               <Label>Payment Method</Label>
-              <Select value={form.payment_method} onValueChange={(v) => setForm((f) => ({ ...f, payment_method: v as PaymentMethod }))}>
-                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(["cash", "online"] as PaymentMethod[]).map((m) => (
-                    <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(["cash", "online", "mixed"] as PaymentMethod[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, payment_method: m, cash_amount: "", online_amount: "" }))}
+                    className={cn(
+                      "py-2 rounded-xl text-xs font-bold border-2 transition-all",
+                      form.payment_method === m
+                        ? "border-brand-600 bg-brand-600 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                    )}
+                  >
+                    {m === "mixed" ? "Mixed" : m.charAt(0).toUpperCase() + m.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              {form.payment_method === "mixed" && (
+                <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-slate-500">Cash (Rs.)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.cash_amount}
+                        onChange={(e) => setForm((f) => ({ ...f, cash_amount: e.target.value }))}
+                        placeholder="0"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-slate-500">Online (Rs.)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.online_amount}
+                        onChange={(e) => setForm((f) => ({ ...f, online_amount: e.target.value }))}
+                        placeholder="0"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                  {(form.cash_amount || form.online_amount) && (
+                    <p className={cn("text-xs font-semibold", mixedBalance === 0 ? "text-emerald-600" : "text-rose-600")}>
+                      {mixedBalance === 0
+                        ? "✓ Total matches invoice"
+                        : mixedBalance > 0
+                        ? `Rs. ${Math.abs(mixedBalance)} excess`
+                        : `Rs. ${Math.abs(mixedBalance)} remaining`}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
             <div className="space-y-1.5">
               <Label>Supplier Invoice #</Label>
               <Input value={form.invoice_number} onChange={(e) => setForm((f) => ({ ...f, invoice_number: e.target.value }))} placeholder="SUP-1234" />
             </div>
+
             {form.quantity && form.unit_cost && (
-              <div className="col-span-2 flex items-center justify-between px-4 py-3 bg-slate-50 rounded-xl">
+              <div className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-xl self-end">
                 <span className="text-sm text-slate-600">Total Cost</span>
-                <span className="text-base font-bold text-rose-700">{formatNPR(Number(form.quantity) * Number(form.unit_cost))}</span>
+                <span className="text-base font-bold text-rose-700">{formatNPR(totalCostCalc)}</span>
               </div>
             )}
+
             <div className="col-span-2 space-y-1.5">
               <Label>Remarks (Optional)</Label>
               <textarea
@@ -405,7 +502,7 @@ function PurchaseHistoryContent() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setDialogOpen(false); setForm(emptyForm); }}>Cancel</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700">
               {saving ? "Saving…" : "Record Purchase"}
             </Button>

@@ -78,8 +78,8 @@ export default function AdminDashboardPage() {
     { title: "Total Purchases", value: kpis.total_purchases, delta: kpis.purchases_change, icon: PackageSearch, colorScheme: "cyan" as const, format: "currency" as const },
     { title: "Net Profit", value: kpis.net_profit, delta: kpis.profit_change, icon: kpis.net_profit >= 0 ? TrendingUp : TrendingDown, colorScheme: kpis.net_profit >= 0 ? "emerald" as const : "rose" as const, format: "currency" as const },
     { title: "Inventory Value", value: kpis.inventory_value, icon: Boxes, colorScheme: "violet" as const, format: "currency" as const },
-    { title: "Total Products", value: kpis.total_products, icon: Package, colorScheme: "blue" as const },
-    { title: "Out of Stock", value: kpis.out_of_stock_count, icon: AlertTriangle, colorScheme: "rose" as const },
+    { title: "Total Products", value: kpis.total_products, icon: Package, colorScheme: "blue" as const, format: "number" as const },
+    { title: "Out of Stock", value: kpis.out_of_stock_count, icon: AlertTriangle, colorScheme: "rose" as const, format: "number" as const },
     { title: "Top Category", value: kpis.top_category ?? "—", icon: Tag, colorScheme: "amber" as const, format: "text" as const },
   ] : [];
 

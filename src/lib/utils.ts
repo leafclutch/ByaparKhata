@@ -162,6 +162,9 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
   online: "Online",
   mixed: "Cash + Online",
+  upi: "UPI",
+  card: "Card",
+  bank_transfer: "Bank Transfer",
 };
 
 export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {

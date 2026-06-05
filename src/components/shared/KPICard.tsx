@@ -56,7 +56,7 @@ export function KPICard({
   deltaLabel,
   icon: Icon,
   colorScheme = "indigo",
-  format = "currency",
+  format = "number",
   index = 0,
 }: {
   title: string;

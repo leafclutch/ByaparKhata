@@ -4,7 +4,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 
 // Load env vars
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env.production.local' });
 
 const { Client } = pg;
 

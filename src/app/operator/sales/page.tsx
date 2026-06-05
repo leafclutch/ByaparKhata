@@ -212,7 +212,7 @@ function SalesHistoryContent() {
             <SelectTrigger className="h-9 text-sm w-40"><SelectValue placeholder="All Payments" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Payments</SelectItem>
-              {(["cash", "online", "card", "bank_transfer"] as PaymentMethod[]).map((m) => (
+              {(["cash", "online", "mixed"] as PaymentMethod[]).map((m) => (
                 <SelectItem key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</SelectItem>
               ))}
             </SelectContent>
