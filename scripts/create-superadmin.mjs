@@ -31,8 +31,8 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 // ── Edit these before running ───────────────────────────────────────────────
-const SA_EMAIL    = "admin@byaparkhata.com";
-const SA_PASSWORD = "ByaparKhata@2026";
+const SA_EMAIL    = "admin@hamrohisab.com";
+const SA_PASSWORD = "HamroHisab@2026";
 const SA_NAME     = "Super Admin";
 const SA_CONTACT  = "";
 // ───────────────────────────────────────────────────────────────────────────

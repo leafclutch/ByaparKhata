@@ -1,10 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Notification } from "@/lib/types";
-import { IS_DEMO_MODE } from "@/lib/env";
-import { DEMO_NOTIFICATIONS } from "@/lib/mock-data";
 
 export async function getNotifications(companyId: string): Promise<Notification[]> {
-  if (IS_DEMO_MODE) return DEMO_NOTIFICATIONS;
   const supabase = createClient();
   const { data, error } = await supabase
     .from("notifications")
@@ -17,14 +14,12 @@ export async function getNotifications(companyId: string): Promise<Notification[
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
-  if (IS_DEMO_MODE) return;
   const supabase = createClient();
   const { error } = await supabase.from("notifications").update({ is_read: true }).eq("id", id);
   if (error) throw error;
 }
 
 export async function markAllNotificationsRead(companyId: string): Promise<void> {
-  if (IS_DEMO_MODE) return;
   const supabase = createClient();
   const { error } = await supabase
     .from("notifications")

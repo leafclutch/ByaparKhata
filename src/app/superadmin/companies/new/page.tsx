@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createCompany } from "@/superadmin/services";
+import { createCompany, uploadCompanyLogo, type CreateCompanyInput } from "@/superadmin/services";
 import { toast } from "sonner";
 import type { PlanType } from "@/lib/types";
 
@@ -21,14 +21,27 @@ export default function NewCompanyPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: "", slug: "", address: "", contact_number: "", contact_email: "",
-    gst_number: "", plan: "starter" as PlanType,
+    pan_vat_number: "", plan: "starter" as PlanType,
     joining_date: new Date().toISOString().split("T")[0],
     subscription_start: new Date().toISOString().split("T")[0],
     subscription_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
   });
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
   function setField<K extends keyof typeof form>(key: K, val: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: val }));
+  }
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setLogoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -36,7 +49,17 @@ export default function NewCompanyPage() {
     if (!form.name || !form.slug) { toast.error("Name and slug are required."); return; }
     setSaving(true);
     try {
-      const company = await createCompany(form);
+      let logoUrl = undefined;
+      if (logoFile) {
+        logoUrl = await uploadCompanyLogo(form.slug, logoFile);
+      }
+
+      const payload: CreateCompanyInput = {
+        ...form,
+        logo_url: logoUrl,
+      };
+
+      const company = await createCompany(payload);
       toast.success("Company created.");
       router.replace(`/superadmin/companies/${company.id}`);
     } catch (err) {
@@ -58,6 +81,39 @@ export default function NewCompanyPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Branding */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+          <p className="text-sm font-semibold text-slate-800">Company Branding</p>
+          <div className="flex items-center gap-6">
+            <div className="relative w-24 h-24 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden group">
+              {logoPreview ? (
+                <>
+                  <img src={logoPreview} alt="Preview" className="w-full h-full object-contain" />
+                  <button
+                    type="button"
+                    onClick={() => { setLogoFile(null); setLogoPreview(null); }}
+                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-6 h-6 text-white" />
+                  </button>
+                </>
+              ) : (
+                <label className="cursor-pointer flex flex-col items-center gap-1">
+                  <Upload className="w-5 h-5 text-slate-400" />
+                  <span className="text-[10px] font-medium text-slate-500 uppercase">Logo</span>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleLogoChange} />
+                </label>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Upload company logo. This will be shown on the dashboard, sidebar, and invoices.
+                If no logo is uploaded, only the company name will be displayed.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Company details */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
           <p className="text-sm font-semibold text-slate-800">Company Details</p>
@@ -77,11 +133,11 @@ export default function NewCompanyPage() {
             </div>
             <div className="space-y-1.5">
               <Label>PAN/VAT Number</Label>
-              <Input value={form.gst_number} onChange={(e) => setField("gst_number", e.target.value)} placeholder="e.g. 29ABCDE1234F1Z5" />
+              <Input value={form.pan_vat_number} onChange={(e) => setField("pan_vat_number", e.target.value)} placeholder="e.g. 29ABCDE1234F1Z5" />
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Address</Label>
-              <Input value={form.address} onChange={(e) => setField("address", e.target.value)} placeholder="12, MG Road, Bengaluru" />
+              <Input value={form.address} onChange={(e) => setField("address", e.target.value)} placeholder="e.g. Kathmandu, Bagmati Province" />
             </div>
             <div className="space-y-1.5">
               <Label>Contact Number</Label>

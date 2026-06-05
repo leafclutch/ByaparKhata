@@ -2,55 +2,50 @@
 
 import { motion } from "framer-motion";
 import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
-import { cn, formatINRCompact } from "@/lib/utils";
-
-interface KPICardProps {
-  title: string;
-  value: number | string;
-  delta?: number;
-  deltaLabel?: string;
-  icon: LucideIcon;
-  colorScheme?: "indigo" | "emerald" | "amber" | "violet" | "cyan" | "rose";
-  format?: "currency" | "number" | "text";
-  index?: number;
-}
+import { cn, formatNPRCompact } from "@/lib/utils";
 
 const colorMap = {
   indigo: {
-    bg: "bg-indigo-50",
-    icon: "text-indigo-600",
+    gradient: "from-indigo-500 to-indigo-700",
     ring: "ring-indigo-100",
-    gradient: "from-indigo-500 to-indigo-600",
+    accent: "bg-indigo-500",
+    soft: "bg-indigo-50 text-indigo-700",
   },
   emerald: {
-    bg: "bg-emerald-50",
-    icon: "text-emerald-600",
+    gradient: "from-emerald-500 to-emerald-700",
     ring: "ring-emerald-100",
-    gradient: "from-emerald-500 to-emerald-600",
+    accent: "bg-emerald-500",
+    soft: "bg-emerald-50 text-emerald-700",
   },
   amber: {
-    bg: "bg-amber-50",
-    icon: "text-amber-600",
+    gradient: "from-amber-400 to-amber-600",
     ring: "ring-amber-100",
-    gradient: "from-amber-500 to-amber-600",
+    accent: "bg-amber-500",
+    soft: "bg-amber-50 text-amber-700",
   },
   violet: {
-    bg: "bg-violet-50",
-    icon: "text-violet-600",
+    gradient: "from-violet-500 to-violet-700",
     ring: "ring-violet-100",
-    gradient: "from-violet-500 to-violet-600",
+    accent: "bg-violet-500",
+    soft: "bg-violet-50 text-violet-700",
   },
   cyan: {
-    bg: "bg-cyan-50",
-    icon: "text-cyan-600",
+    gradient: "from-cyan-500 to-cyan-700",
     ring: "ring-cyan-100",
-    gradient: "from-cyan-500 to-cyan-600",
+    accent: "bg-cyan-500",
+    soft: "bg-cyan-50 text-cyan-700",
   },
   rose: {
-    bg: "bg-rose-50",
-    icon: "text-rose-600",
+    gradient: "from-rose-500 to-rose-700",
     ring: "ring-rose-100",
-    gradient: "from-rose-500 to-rose-600",
+    accent: "bg-rose-500",
+    soft: "bg-rose-50 text-rose-700",
+  },
+  blue: {
+    gradient: "from-blue-500 to-blue-700",
+    ring: "ring-blue-100",
+    accent: "bg-blue-500",
+    soft: "bg-blue-50 text-blue-700",
   },
 };
 
@@ -63,15 +58,24 @@ export function KPICard({
   colorScheme = "indigo",
   format = "currency",
   index = 0,
-}: KPICardProps) {
+}: {
+  title: string;
+  value: number | string;
+  delta?: number;
+  deltaLabel?: string;
+  icon: LucideIcon;
+  colorScheme?: keyof typeof colorMap;
+  format?: "currency" | "number" | "text";
+  index?: number;
+}) {
   const colors = colorMap[colorScheme];
   const isPositive = delta !== undefined ? delta >= 0 : true;
 
   const displayValue =
     format === "currency" && typeof value === "number"
-      ? formatINRCompact(value)
+      ? formatNPRCompact(value)
       : typeof value === "number"
-      ? value.toLocaleString("en-IN")
+      ? value.toLocaleString()
       : value;
 
   return (
@@ -79,26 +83,33 @@ export function KPICard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.07, ease: "easeOut" }}
-      whileHover={{ y: -2, transition: { duration: 0.15 } }}
-      className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-shadow"
+      className="group relative bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
     >
+      {/* Subtle top gradient accent */}
+      <div className={cn("absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r opacity-60", colors.gradient)} />
+
       <div className="flex items-start justify-between mb-4">
+        <p className="text-sm font-medium text-slate-500 leading-snug pr-2">{title}</p>
         <div
           className={cn(
-            "w-11 h-11 rounded-xl flex items-center justify-center ring-4",
-            colors.bg,
-            colors.ring
+            "w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br flex-shrink-0 shadow-sm",
+            colors.gradient
           )}
         >
-          <Icon className={cn("w-5 h-5", colors.icon)} />
+          <Icon className="w-5 h-5 text-white" />
         </div>
-        {delta !== undefined && (
-          <div
+      </div>
+
+      <p className="text-2xl font-black text-slate-900 tracking-tight tabular-nums mb-2">
+        {displayValue}
+      </p>
+
+      {delta !== undefined ? (
+        <div className="flex items-center gap-1.5">
+          <span
             className={cn(
-              "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full",
-              isPositive
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-rose-50 text-rose-700"
+              "inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full",
+              isPositive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
             )}
           >
             {isPositive ? (
@@ -107,17 +118,12 @@ export function KPICard({
               <TrendingDown className="w-3 h-3" />
             )}
             {Math.abs(delta).toFixed(1)}%
-          </div>
-        )}
-      </div>
-
-      <div className="text-2xl font-bold text-slate-900 tracking-tight mb-1">
-        {displayValue}
-      </div>
-      <div className="text-sm text-slate-500 font-medium">{title}</div>
-      {deltaLabel && (
-        <div className="text-xs text-slate-400 mt-1">{deltaLabel}</div>
-      )}
+          </span>
+          <span className="text-xs text-slate-400">vs last month</span>
+        </div>
+      ) : deltaLabel ? (
+        <p className="text-xs text-slate-400">{deltaLabel}</p>
+      ) : null}
     </motion.div>
   );
 }

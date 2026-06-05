@@ -1,4 +1,4 @@
--- VyaparKhata — Supabase Database Schema v2
+-- HamroHisab — Supabase Database Schema v2
 -- Run this in the Supabase SQL Editor for your project
 
 -- ============================================================

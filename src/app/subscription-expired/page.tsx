@@ -48,7 +48,7 @@ function ExpiredContent() {
           </Button>
         </div>
 
-        <p className="mt-8 text-[10px] text-slate-300">Powered by ByaparKhata</p>
+        <p className="mt-8 text-[10px] text-slate-300">Powered by HamroHisab</p>
       </div>
     </div>
   );

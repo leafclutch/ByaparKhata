@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { getProducts } from "@/lib/services/products";
 import { getCategories } from "@/lib/services/categories";
-import { formatINR, getStockStatus } from "@/lib/utils";
+import { formatNPR, getStockStatus } from "@/lib/utils";
 import type { Product, Category } from "@/lib/types";
 
 const inventoryColumns = [
@@ -19,8 +19,8 @@ const inventoryColumns = [
   { key: "category", header: "Category", render: (r: Product) => <span className="text-xs text-slate-500">{r.category?.name}</span> },
   { key: "quantity", header: "In Stock", render: (r: Product) => <div className="flex items-center gap-2"><span className="text-sm font-medium text-slate-800">{r.quantity}</span><span className="text-xs text-slate-400">/ min {r.min_stock}</span></div> },
   { key: "status", header: "Status", render: (r: Product) => <StatusBadge status={getStockStatus(r.quantity, r.min_stock)} /> },
-  { key: "stock_value", header: "Stock Value", render: (r: Product) => <span className="text-sm font-semibold text-slate-800">{formatINR(r.quantity * r.purchase_price)}</span> },
-  { key: "selling_price", header: "Sell Price", render: (r: Product) => <span className="text-sm text-slate-600">{formatINR(r.selling_price)}</span> },
+  { key: "stock_value", header: "Stock Value", render: (r: Product) => <span className="text-sm font-semibold text-slate-800">{formatNPR(r.quantity * r.purchase_price)}</span> },
+  { key: "selling_price", header: "Sell Price", render: (r: Product) => <span className="text-sm text-slate-600">{formatNPR(r.selling_price)}</span> },
 ];
 
 export default function InventoryInsightsPage() {
@@ -116,7 +116,7 @@ export default function InventoryInsightsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-800 mb-1">Stock Value by Category</h3>
-          <p className="text-xs text-slate-400 mb-4">Total: {formatINR(totalValue)}</p>
+          <p className="text-xs text-slate-400 mb-4">Total: {formatNPR(totalValue)}</p>
           <ExpenseDonutChart data={categoryBreakdown} />
         </motion.div>
 

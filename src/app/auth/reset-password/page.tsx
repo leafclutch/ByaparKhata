@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/Logo";
 import { toast } from "sonner";
-import { IS_DEMO_MODE } from "@/lib/env";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -30,13 +29,6 @@ export default function ResetPasswordPage() {
       return;
     }
     setLoading(true);
-
-    if (IS_DEMO_MODE) {
-      await new Promise((r) => setTimeout(r, 800));
-      setDone(true);
-      setLoading(false);
-      return;
-    }
 
     try {
       const { createClient } = await import("@/lib/supabase/client");

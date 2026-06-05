@@ -15,9 +15,8 @@ type BadgeVariant =
   | "active"
   | "inactive"
   | "cash"
-  | "upi"
-  | "card"
-  | "bank_transfer"
+  | "online"
+  | "mixed"
   | "alert"
   | "info"
   | "warning"
@@ -60,11 +59,10 @@ const variantStyles: Record<BadgeVariant, string> = {
   starter: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
   pro: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
   enterprise: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
-  // Payment
-  cash: "bg-slate-50 text-slate-700 ring-1 ring-slate-200",
-  upi: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
-  card: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-  bank_transfer: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
+  // Payment methods
+  cash: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+  online: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  mixed: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
   // Notification types
   alert: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
   info: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
@@ -103,9 +101,8 @@ const variantLabels: Record<BadgeVariant, string> = {
   pro: "Pro",
   enterprise: "Enterprise",
   cash: "Cash",
-  upi: "UPI",
-  card: "Card",
-  bank_transfer: "Bank Transfer",
+  online: "Online",
+  mixed: "Cash + Online",
   alert: "Alert",
   info: "Info",
   warning: "Warning",

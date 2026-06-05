@@ -1,4 +1,4 @@
--- VyaparKhata — Migration v2
+-- HamroHisab — Migration v2
 -- Run this against an EXISTING database that already has the v1 schema.
 -- All ALTER TABLE statements are idempotent (safe to run multiple times).
 

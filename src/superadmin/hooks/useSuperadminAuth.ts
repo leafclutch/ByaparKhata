@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { IS_DEMO_MODE } from "@/lib/env";
-import { SA_PROFILE } from "@/superadmin/lib/mock-data";
 import type { SuperadminProfile } from "@/lib/types";
 
 interface SAAuthState {
@@ -14,11 +12,6 @@ export function useSuperadminAuth(): SAAuthState & { signOut: () => void } {
   const [state, setState] = useState<SAAuthState>({ profile: null, loading: true });
 
   useEffect(() => {
-    if (IS_DEMO_MODE) {
-      setState({ profile: SA_PROFILE, loading: false });
-      return;
-    }
-
     import("@/lib/supabase/client").then(({ createClient }) => {
       const supabase = createClient();
 
@@ -62,10 +55,6 @@ export function useSuperadminAuth(): SAAuthState & { signOut: () => void } {
   }, []);
 
   const signOut = useCallback(async () => {
-    if (IS_DEMO_MODE) {
-      window.location.href = "/superadmin/login";
-      return;
-    }
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     await supabase.auth.signOut();

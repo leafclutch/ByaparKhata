@@ -16,7 +16,7 @@ import {
   getCompanyUsers, createUser, setUserStatus, resetUserPassword, deleteCompany,
 } from "@/superadmin/services";
 import { toast } from "sonner";
-import { getDaysRemaining, formatINRCompact } from "@/lib/utils";
+import { getDaysRemaining, formatNPRCompact } from "@/lib/utils";
 import type { CompanyStat, SuperadminUser, CompanyStatus } from "@/lib/types";
 
 type Tab = "overview" | "subscription" | "users";
@@ -148,12 +148,12 @@ export default function CompanyDetailPage() {
               ["Name", company.name],
               ["Slug", company.slug],
               ["Address", company.address ?? "—"],
-              ["PAN/VAT", company.gst_number ?? "—"],
+              ["PAN/VAT", company.pan_vat_number ?? "—"],
               ["Contact", company.contact_number ?? "—"],
               ["Email", company.contact_email ?? "—"],
               ["Users", String(company.users_count)],
               ["Products", String(company.products_count)],
-              ["Total Sales", formatINRCompact(company.total_sales_value)],
+              ["Total Sales", formatNPRCompact(company.total_sales_value)],
             ].map(([label, value]) => (
               <div key={label}>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</p>

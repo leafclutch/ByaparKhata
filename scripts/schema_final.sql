@@ -1,4 +1,4 @@
--- ByaparKhata — Production Schema
+-- HamroHisab — Production Schema
 -- Paste into Supabase SQL Editor and click Run
 
 -- Extensions

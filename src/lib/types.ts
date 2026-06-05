@@ -12,7 +12,7 @@ export interface Company {
   slug?: string;
   logo_url?: string;
   address?: string;
-  gst_number?: string;
+  pan_vat_number?: string;
   contact_number?: string;
   contact_email?: string;
   currency: string;
@@ -84,10 +84,10 @@ export interface Sale {
   customer_name?: string;
   subtotal: number;
   discount: number;
-  tax_rate: number;
-  tax_amount: number;
   grand_total: number;
   payment_method: PaymentMethod;
+  cash_amount?: number;
+  online_amount?: number;
   notes?: string;
   created_at: string;
   items?: SaleItem[];
@@ -166,7 +166,7 @@ export interface Notification {
 }
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
-export type PaymentMethod = "cash" | "upi" | "card" | "bank_transfer";
+export type PaymentMethod = "cash" | "online" | "mixed";
 export type ExpenseCategory =
   | "rent" | "salary" | "electricity" | "transport"
   | "marketing" | "maintenance" | "other";
@@ -182,6 +182,10 @@ export interface DashboardKPIs {
   purchases_change: number;
   expenses_change: number;
   profit_change: number;
+  total_products: number;
+  low_stock_count: number;
+  out_of_stock_count: number;
+  top_category?: string;
 }
 
 export interface MonthlyData {
@@ -244,7 +248,7 @@ export interface CompanyStat {
   contact_number?: string;
   contact_email?: string;
   logo_url?: string;
-  gst_number?: string;
+  pan_vat_number?: string;
   joining_date?: string;
   subscription_start?: string;
   subscription_end?: string;
@@ -255,6 +259,22 @@ export interface CompanyStat {
   products_count: number;
   sales_count: number;
   total_sales_value: number;
+  created_at: string;
+}
+
+export type InventoryTransactionReferenceType = "purchase" | "sale" | "return" | "adjustment";
+
+export interface InventoryTransaction {
+  id: string;
+  company_id: string;
+  product_id: string;
+  quantity_change: number;
+  previous_stock: number;
+  new_stock: number;
+  reference_type: InventoryTransactionReferenceType;
+  reference_id?: string;
+  user_id?: string;
+  notes?: string;
   created_at: string;
 }
 
@@ -298,4 +318,38 @@ export interface CompanyGrowthPoint {
   new_companies: number;
   new_users: number;
   revenue: number;
+}
+
+// ─── Activity / Audit ─────────────────────────────────────────────────────────
+export type ActivityAction = "create" | "update" | "delete" | "adjustment";
+export type ActivityEntityType = "sale" | "purchase" | "product" | "expense" | "category";
+
+export interface Actor {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  company_id: string;
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  action: ActivityAction;
+  entity_type: ActivityEntityType;
+  entity_id: string;
+  entity_label?: string;
+  created_at: string;
+}
+
+export interface OperatorActivity {
+  user_id: string;
+  user_name: string;
+  role: string;
+  sales_count: number;
+  total_sales_value: number;
+  purchases_count: number;
+  total_actions: number;
+  last_active: string | null;
 }
