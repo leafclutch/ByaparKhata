@@ -8,10 +8,10 @@ import { InventoryChart } from "@/components/charts/InventoryChart";
 import { DataTable } from "@/components/shared/DataTable";
 import { useAuth } from "@/hooks/useAuth";
 import { getMonthlyRevenue, getTopProducts } from "@/lib/services/analytics";
-import { getSales } from "@/lib/services/sales";
-import { getCompanyTeam } from "@/lib/services/company";
+import { getOperatorStats } from "@/lib/services/activity";
+import { toast } from "sonner";
 import { formatNPR, formatDate } from "@/lib/utils";
-import type { MonthlyData, ProductStat, AppUser, Sale } from "@/lib/types";
+import type { MonthlyData, ProductStat, OperatorActivity } from "@/lib/types";
 
 const topProductColumns = [
   {
@@ -42,35 +42,22 @@ export default function AnalyticsPage() {
   const { user } = useAuth();
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [topProducts, setTopProducts] = useState<ProductStat[]>([]);
-  const [team, setTeam] = useState<AppUser[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [operatorStats, setOperatorStats] = useState<OperatorActivity[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id) return;
     const cid = user.company_id;
     Promise.all([
       getMonthlyRevenue(cid, 6),
       getTopProducts(cid, 5),
-      getCompanyTeam(cid),
-      getSales(cid),
+      getOperatorStats(cid),
     ])
-      .then(([m, tp, t, s]) => { setMonthlyData(m); setTopProducts(tp); setTeam(t); setSales(s); })
-      .catch(() => {});
-  }, [user]);
-
-  const operatorStats = team
-    .filter((u) => u.role === "operator")
-    .map((op) => {
-      const opSales = sales.filter((s) => s.operator_id === op.id);
-      const lastSale = opSales[0];
-      return {
-        operator: op,
-        sales_count: opSales.length,
-        total_revenue: opSales.reduce((s, r) => s + r.grand_total, 0),
-        last_active: lastSale?.created_at ?? op.created_at,
-      };
-    })
-    .sort((a, b) => b.total_revenue - a.total_revenue);
+      .then(([m, tp, ops]) => { setMonthlyData(m); setTopProducts(tp); setOperatorStats(ops); })
+      .catch((err) => {
+        console.error("[analytics]", err);
+        toast.error("Failed to load analytics data.");
+      });
+  }, [user?.company_id]);
 
   return (
     <div className="space-y-6">
@@ -114,16 +101,18 @@ export default function AnalyticsPage() {
           ) : (
             <div className="space-y-3 mt-4">
               {operatorStats.map((stat) => (
-                <div key={stat.operator.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                <div key={stat.user_id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                   <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                    {stat.operator.full_name.split(" ").map((n) => n[0]).join("")}
+                    {stat.user_name.split(" ").map((n) => n[0]).join("")}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800">{stat.operator.full_name}</p>
-                    <p className="text-xs text-slate-400">{stat.sales_count} sales · Last active {formatDate(stat.last_active)}</p>
+                    <p className="text-sm font-medium text-slate-800">{stat.user_name}</p>
+                    <p className="text-xs text-slate-400">
+                      {stat.sales_count} sales · Last active {stat.last_active ? formatDate(stat.last_active) : "—"}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-emerald-700">{formatNPR(stat.total_revenue)}</p>
+                    <p className="text-sm font-bold text-emerald-700">{formatNPR(stat.total_sales_value)}</p>
                     <p className="text-xs text-slate-400">revenue</p>
                   </div>
                 </div>

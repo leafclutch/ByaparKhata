@@ -188,9 +188,9 @@ function SalesContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Left: product search + cart */}
-        <div className="xl:col-span-3 space-y-4">
+        <div className="lg:col-span-3 space-y-4">
           <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

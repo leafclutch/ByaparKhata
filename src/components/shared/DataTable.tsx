@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronUp, ChevronDown, Inbox } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -13,6 +12,7 @@ export interface Column<T> {
   sortable?: boolean;
   className?: string;
   headerClassName?: string;
+  hideBelow?: "sm" | "md" | "lg";
 }
 
 interface DataTableProps<T> {
@@ -105,6 +105,7 @@ export function DataTable<T extends Record<string, any>>({
                     "bg-slate-50 border-b border-slate-200",
                     i === 0 && "rounded-tl-none",
                     col.sortable && "cursor-pointer hover:text-slate-700 select-none hover:bg-slate-100 transition-colors",
+                    col.hideBelow && `hidden ${col.hideBelow}:table-cell`,
                     col.headerClassName
                   )}
                 >
@@ -135,58 +136,55 @@ export function DataTable<T extends Record<string, any>>({
               ))}
             </tr>
           </thead>
+          {/* Fix #13: removed per-row AnimatePresence+motion.tr — eliminated N framer-motion instances */}
           <tbody>
-            <AnimatePresence>
-              {sorted.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length}>
-                    <div className="py-14 text-center">
-                      <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                        <Inbox className="w-5 h-5 text-slate-400" />
-                      </div>
-                      <p className="text-sm font-medium text-slate-500">{emptyMessage}</p>
+            {sorted.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length}>
+                  <div className="py-14 text-center">
+                    <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <Inbox className="w-5 h-5 text-slate-400" />
                     </div>
-                  </td>
+                    <p className="text-sm font-medium text-slate-500">{emptyMessage}</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              sorted.map((row, i) => (
+                <tr
+                  key={
+                    typeof rowKey === "function"
+                      ? rowKey(row)
+                      : rowKey
+                      ? String(row[rowKey])
+                      : i
+                  }
+                  onClick={() => onRowClick?.(row)}
+                  className={cn(
+                    "group border-b border-slate-50 last:border-0 transition-colors",
+                    onRowClick
+                      ? "cursor-pointer hover:bg-brand-50/40"
+                      : "hover:bg-slate-50/70"
+                  )}
+                >
+                  {columns.map((col, ci) => (
+                    <td
+                      key={String(col.key)}
+                      className={cn(
+                        "px-4 py-3 text-sm text-slate-700",
+                        ci === 0 && onRowClick && "group-hover:text-brand-700 font-medium",
+                        col.hideBelow && `hidden ${col.hideBelow}:table-cell`,
+                        col.className
+                      )}
+                    >
+                      {col.render
+                        ? col.render(row, i)
+                        : String(row[col.key as keyof T] ?? "")}
+                    </td>
+                  ))}
                 </tr>
-              ) : (
-                sorted.map((row, i) => (
-                  <motion.tr
-                    key={
-                      typeof rowKey === "function"
-                        ? rowKey(row)
-                        : rowKey
-                        ? String(row[rowKey])
-                        : i
-                    }
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.12, delay: i * 0.015 }}
-                    onClick={() => onRowClick?.(row)}
-                    className={cn(
-                      "group border-b border-slate-50 last:border-0 transition-colors",
-                      onRowClick
-                        ? "cursor-pointer hover:bg-brand-50/40"
-                        : "hover:bg-slate-50/70"
-                    )}
-                  >
-                    {columns.map((col, ci) => (
-                      <td
-                        key={String(col.key)}
-                        className={cn(
-                          "px-4 py-3 text-sm text-slate-700",
-                          ci === 0 && onRowClick && "group-hover:text-brand-700 font-medium",
-                          col.className
-                        )}
-                      >
-                        {col.render
-                          ? col.render(row, i)
-                          : String(row[col.key as keyof T] ?? "")}
-                      </td>
-                    ))}
-                  </motion.tr>
-                ))
-              )}
-            </AnimatePresence>
+              ))
+            )}
           </tbody>
         </table>
       </div>

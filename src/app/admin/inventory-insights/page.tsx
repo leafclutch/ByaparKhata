@@ -14,12 +14,12 @@ import { formatNPR, getStockStatus } from "@/lib/utils";
 import type { Product, Category } from "@/lib/types";
 
 const inventoryColumns = [
-  { key: "sku", header: "SKU", render: (r: Product) => <code className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{r.sku}</code> },
+  { key: "sku", header: "SKU", hideBelow: "sm" as const, render: (r: Product) => <code className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{r.sku}</code> },
   { key: "name", header: "Product", render: (r: Product) => <span className="text-sm font-medium text-slate-800">{r.name}</span> },
-  { key: "category", header: "Category", render: (r: Product) => <span className="text-xs text-slate-500">{r.category?.name}</span> },
+  { key: "category", header: "Category", hideBelow: "md" as const, render: (r: Product) => <span className="text-xs text-slate-500">{r.category?.name}</span> },
   { key: "quantity", header: "In Stock", render: (r: Product) => <div className="flex items-center gap-2"><span className="text-sm font-medium text-slate-800">{r.quantity}</span><span className="text-xs text-slate-400">/ min {r.min_stock}</span></div> },
   { key: "status", header: "Status", render: (r: Product) => <StatusBadge status={getStockStatus(r.quantity, r.min_stock)} /> },
-  { key: "stock_value", header: "Stock Value", render: (r: Product) => <span className="text-sm font-semibold text-slate-800">{formatNPR(r.quantity * r.purchase_price)}</span> },
+  { key: "stock_value", header: "Stock Value", hideBelow: "md" as const, render: (r: Product) => <span className="text-sm font-semibold text-slate-800">{formatNPR(r.quantity * r.purchase_price)}</span> },
   { key: "selling_price", header: "Sell Price", render: (r: Product) => <span className="text-sm text-slate-600">{formatNPR(r.selling_price)}</span> },
 ];
 
@@ -29,12 +29,12 @@ export default function InventoryInsightsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id) return;
     const cid = user.company_id;
     Promise.all([getProducts(cid), getCategories(cid)])
       .then(([p, c]) => { setProducts(p); setCategories(c); })
       .catch(() => {});
-  }, [user]);
+  }, [user?.company_id]);
 
   const stockStatusCounts = useMemo(() => ({
     ok: products.filter((p) => getStockStatus(p.quantity, p.min_stock) === "ok").length,
@@ -70,7 +70,7 @@ export default function InventoryInsightsPage() {
         <p className="text-sm text-slate-500 mt-0.5">Read-only stock analysis and alerts</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Total Products", value: products.length, icon: Package, color: "text-brand-700 bg-brand-50" },
           { label: "Healthy Stock", value: stockStatusCounts.ok, icon: CheckCircle2, color: "text-emerald-700 bg-emerald-50" },

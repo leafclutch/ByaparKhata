@@ -51,20 +51,22 @@ function SalesHistoryContent() {
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Fix #10: team fetch separated — team doesn't change when period filter changes
+  useEffect(() => {
+    if (!user?.company_id) return;
+    getCompanyTeam(user.company_id).then(setTeam).catch(() => {});
+  }, [user?.company_id]);
+
   const loadData = useCallback(async () => {
     if (!user?.company_id) return;
     setLoading(true);
     const { from, to } = getDateRange(period, customFrom, customTo);
     try {
-      const [sales, members] = await Promise.all([
-        getSales(user.company_id, {
-          from_date: from || undefined,
-          to_date: to || undefined,
-        }),
-        getCompanyTeam(user.company_id),
-      ]);
+      const sales = await getSales(user.company_id, {
+        from_date: from || undefined,
+        to_date: to || undefined,
+      });
       setAllSales(sales);
-      setTeam(members);
     } catch {
       toast.error("Failed to load sales.");
     } finally {

@@ -188,6 +188,7 @@ export interface DashboardKPIs {
   low_stock_count: number;
   out_of_stock_count: number;
   top_category?: string;
+  low_stock_products: Array<{ id: string; name: string; quantity: number; min_stock: number }>;
 }
 
 export interface MonthlyData {

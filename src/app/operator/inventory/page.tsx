@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Edit2, AlertTriangle, Package, History, ArrowRightLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -31,8 +31,14 @@ export default function InventoryPage() {
   const [adjustReason, setAdjustReason] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Fix #11: lazy-load tabs — each tab fetches once; subsequent switches skip the network call
+  // Fix #15: primitive dep [user?.company_id] instead of [user] to avoid extra fetches on token refresh
+  const loadedTabs = useRef<Set<Tab>>(new Set());
+
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id) return;
+    if (loadedTabs.current.has(tab)) return;
+    loadedTabs.current.add(tab);
     setLoading(true);
     if (tab === "stock") {
       getProducts(user.company_id)
@@ -45,7 +51,7 @@ export default function InventoryPage() {
         .catch(() => toast.error("Failed to load transaction history."))
         .finally(() => setLoading(false));
     }
-  }, [user, tab]);
+  }, [user?.company_id, tab]);
 
   const filteredProducts = products.filter(
     (p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase())

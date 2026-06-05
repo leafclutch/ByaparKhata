@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { History } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,18 +15,18 @@ import { formatNPR, formatDate } from "@/lib/utils";
 import type { Sale, Purchase, Expense } from "@/lib/types";
 
 const salesColumns = [
-  { key: "invoice_number", header: "Invoice", render: (r: Sale) => <code className="text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded font-medium">{r.invoice_number}</code> },
+  { key: "invoice_number", header: "Invoice", hideBelow: "sm" as const, render: (r: Sale) => <code className="text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded font-medium">{r.invoice_number}</code> },
   { key: "customer_name", header: "Customer", render: (r: Sale) => <span className="text-sm text-slate-700">{r.customer_name || "Walk-in"}</span> },
-  { key: "payment_method", header: "Payment", render: (r: Sale) => <StatusBadge status={r.payment_method} /> },
+  { key: "payment_method", header: "Payment", hideBelow: "md" as const, render: (r: Sale) => <StatusBadge status={r.payment_method} /> },
   { key: "grand_total", header: "Total", render: (r: Sale) => <span className="text-sm font-semibold text-emerald-700">{formatNPR(r.grand_total)}</span> },
   { key: "created_at", header: "Date", render: (r: Sale) => <span className="text-xs text-slate-400">{formatDate(r.created_at)}</span> },
 ];
 
 const purchaseColumns = [
-  { key: "invoice_number", header: "Invoice", render: (r: Purchase) => <code className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{r.invoice_number ?? "—"}</code> },
+  { key: "invoice_number", header: "Invoice", hideBelow: "sm" as const, render: (r: Purchase) => <code className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{r.invoice_number ?? "—"}</code> },
   { key: "supplier_name", header: "Supplier", render: (r: Purchase) => <span className="text-sm text-slate-700">{r.supplier_name}</span> },
   { key: "product_name", header: "Product", render: (r: Purchase) => <span className="text-sm text-slate-600">{r.product_name}</span> },
-  { key: "quantity", header: "Qty", render: (r: Purchase) => <span className="text-sm text-slate-600">×{r.quantity}</span> },
+  { key: "quantity", header: "Qty", hideBelow: "md" as const, render: (r: Purchase) => <span className="text-sm text-slate-600">×{r.quantity}</span> },
   { key: "total_cost", header: "Cost", render: (r: Purchase) => <span className="text-sm font-semibold text-rose-700">{formatNPR(r.total_cost)}</span> },
   { key: "purchased_at", header: "Date", render: (r: Purchase) => <span className="text-xs text-slate-400">{formatDate(r.purchased_at)}</span> },
 ];
@@ -41,22 +41,40 @@ const expenseColumns = [
 
 export default function TransactionsPage() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("sales");
   const [mySales, setMySales] = useState<Sale[]>([]);
   const [myPurchases, setMyPurchases] = useState<Purchase[]>([]);
   const [myExpenses, setMyExpenses] = useState<Expense[]>([]);
+  const fetchedTabs = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id || !user?.id) return;
+    if (fetchedTabs.current.has(activeTab)) return;
+    fetchedTabs.current.add(activeTab);
+
     const cid = user.company_id;
     const uid = user.id;
-    Promise.all([getSales(cid), getPurchases(cid), getExpenses(cid)])
-      .then(([sales, purchases, expenses]) => {
-        setMySales(sales.filter((s) => s.operator_id === uid));
-        setMyPurchases(purchases.filter((p) => p.operator_id === uid));
-        setMyExpenses(expenses.filter((e) => e.operator_id === uid));
-      })
-      .catch(() => toast.error("Failed to load transactions."));
-  }, [user]);
+
+    const load = async () => {
+      try {
+        switch (activeTab) {
+          case "sales":
+            setMySales(await getSales(cid, { operator_id: uid }));
+            break;
+          case "purchases":
+            setMyPurchases(await getPurchases(cid, { operator_id: uid }));
+            break;
+          case "expenses":
+            setMyExpenses(await getExpenses(cid, { operator_id: uid }));
+            break;
+        }
+      } catch {
+        fetchedTabs.current.delete(activeTab);
+        toast.error(`Failed to load ${activeTab}.`);
+      }
+    };
+    load();
+  }, [user?.company_id, user?.id, activeTab]);
 
   return (
     <div className="space-y-5">
@@ -80,7 +98,7 @@ export default function TransactionsPage() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <Tabs defaultValue="sales">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="border-b border-slate-100 px-4 pt-3">
             <TabsList className="bg-transparent gap-1 h-auto pb-0">
               {["sales", "purchases", "expenses"].map((t) => (

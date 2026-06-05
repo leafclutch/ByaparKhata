@@ -2,14 +2,16 @@ import { createClient } from "@/lib/supabase/client";
 import type { Product, InventoryTransaction, Actor } from "@/lib/types";
 import { logActivity } from "./activity";
 
-export async function getProducts(companyId: string): Promise<Product[]> {
+// Fix #16: add safety limit to prevent unbounded catalogue fetches
+export async function getProducts(companyId: string, limit = 2000): Promise<Product[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("products")
     .select("*, category:categories(id, name, color, slug, level, parent_id)")
     .eq("company_id", companyId)
     .eq("is_active", true)
-    .order("name");
+    .order("name")
+    .limit(limit);
   if (error) throw error;
   return data ?? [];
 }
@@ -29,11 +31,12 @@ export interface CreateProductInput {
   expiry_notification_days?: number;
 }
 
+// Fix #17: select("id") instead of select("*") — avoids transferring all column metadata in a HEAD request
 export async function generateSKU(companyId: string, categoryPrefix?: string): Promise<string> {
   const supabase = createClient();
   const { count, error } = await supabase
     .from("products")
-    .select("*", { count: "exact", head: true })
+    .select("id", { count: "exact", head: true })
     .eq("company_id", companyId);
   if (error) throw error;
 
@@ -135,7 +138,8 @@ export async function getInventoryTransactions(companyId: string): Promise<Inven
     .from("inventory_transactions")
     .select("*, product:products(name, sku)")
     .eq("company_id", companyId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (error) throw error;
   return data ?? [];
 }

@@ -141,11 +141,11 @@ export default function NewCompanyPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Contact Number</Label>
-              <Input value={form.contact_number} onChange={(e) => setField("contact_number", e.target.value)} placeholder="+91 98765 43210" />
+              <Input value={form.contact_number} onChange={(e) => setField("contact_number", e.target.value)} placeholder="+977 98XXXXXXXX" />
             </div>
             <div className="space-y-1.5">
               <Label>Contact Email</Label>
-              <Input type="email" value={form.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="admin@company.in" />
+              <Input type="email" value={form.contact_email} onChange={(e) => setField("contact_email", e.target.value)} placeholder="admin@company.com.np" />
             </div>
           </div>
         </div>

@@ -22,17 +22,16 @@ function BillingContent() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
 
+  // Fix #12: merged two sequential effects into one parallel Promise.all
   useEffect(() => {
-    if (!user) return;
-    getCompany(user.company_id).then(setCompany).catch(() => {});
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    if (saleIdParam) {
-      getSaleWithItems(saleIdParam).then(setSale);
-    }
-  }, [saleIdParam, user]);
+    if (!user?.company_id) return;
+    Promise.all([
+      getCompany(user.company_id),
+      saleIdParam ? getSaleWithItems(saleIdParam) : Promise.resolve(null as Sale | null),
+    ])
+      .then(([c, s]) => { setCompany(c); if (s) setSale(s); })
+      .catch(() => {});
+  }, [user?.company_id, saleIdParam]);
 
   if (!sale && !invoiceParam) {
     return (

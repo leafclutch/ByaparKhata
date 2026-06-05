@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   TrendingUp, TrendingDown, ShoppingCart, PackageSearch,
@@ -12,12 +12,11 @@ import { ExpenseDonutChart } from "@/components/charts/ExpenseDonutChart";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/hooks/useAuth";
-import { getDashboardKPIs, getMonthlyRevenue, getExpenseBreakdown, getTopProducts } from "@/lib/services/analytics";
-import { getSales } from "@/lib/services/sales";
-import { getProducts } from "@/lib/services/products";
-import { formatNPR, formatDate, getStockStatus, getDateRange } from "@/lib/utils";
+import { getDashboardData } from "@/lib/services/analytics";
+import { toast } from "sonner";
+import { formatNPR, formatDate } from "@/lib/utils";
 import Link from "next/link";
-import type { DashboardKPIs, MonthlyData, CategoryBreakdown, ProductStat, Sale, Product } from "@/lib/types";
+import type { DashboardKPIs, MonthlyData, CategoryBreakdown, ProductStat, Sale } from "@/lib/types";
 
 const txnColumns = [
   { key: "invoice_number", header: "Invoice", render: (r: Sale) => <code className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{r.invoice_number}</code> },
@@ -44,6 +43,7 @@ const productColumns = [
   },
 ];
 
+// Fix #1: single getDashboardData call replaces 18 individual queries
 export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
@@ -51,29 +51,24 @@ export default function AdminDashboardPage() {
   const [expenseBreakdown, setExpenseBreakdown] = useState<CategoryBreakdown[]>([]);
   const [topProducts, setTopProducts] = useState<ProductStat[]>([]);
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
-  const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    if (!user) return;
-    const cid = user.company_id;
-    Promise.all([
-      getDashboardKPIs(cid),
-      getMonthlyRevenue(cid, 6),
-      getExpenseBreakdown(cid),
-      getTopProducts(cid, 5),
-      getSales(cid),
-      getProducts(cid),
-    ]).then(([k, m, e, tp, sales, products]) => {
-      setKpis(k);
-      setMonthlyData(m);
-      setExpenseBreakdown(e);
-      setTopProducts(tp);
-      setRecentSales(sales.slice(0, 10));
-      setLowStockProducts(products.filter((p) => getStockStatus(p.quantity, p.min_stock) !== "ok"));
-    }).catch(() => {});
-  }, [user]);
+    if (!user?.company_id) return;
+    getDashboardData(user.company_id)
+      .then(({ kpis, monthlyData, expenseBreakdown, topProducts, recentSales }) => {
+        setKpis(kpis);
+        setMonthlyData(monthlyData);
+        setExpenseBreakdown(expenseBreakdown);
+        setTopProducts(topProducts);
+        setRecentSales(recentSales);
+      })
+      .catch((err) => {
+        console.error("[admin dashboard]", err);
+        toast.error("Failed to load dashboard data.");
+      });
+  }, [user?.company_id]);
 
-  const kpiCards = kpis ? [
+  const kpiCards = useMemo(() => kpis ? [
     { title: "Total Revenue", value: kpis.total_sales, delta: kpis.sales_change, icon: DollarSign, colorScheme: "indigo" as const, format: "currency" as const },
     { title: "Total Purchases", value: kpis.total_purchases, delta: kpis.purchases_change, icon: PackageSearch, colorScheme: "cyan" as const, format: "currency" as const },
     { title: "Net Profit", value: kpis.net_profit, delta: kpis.profit_change, icon: kpis.net_profit >= 0 ? TrendingUp : TrendingDown, colorScheme: kpis.net_profit >= 0 ? "emerald" as const : "rose" as const, format: "currency" as const },
@@ -81,17 +76,17 @@ export default function AdminDashboardPage() {
     { title: "Total Products", value: kpis.total_products, icon: Package, colorScheme: "blue" as const, format: "number" as const },
     { title: "Out of Stock", value: kpis.out_of_stock_count, icon: AlertTriangle, colorScheme: "rose" as const, format: "number" as const },
     { title: "Top Category", value: kpis.top_category ?? "—", icon: Tag, colorScheme: "amber" as const, format: "text" as const },
-  ] : [];
+  ] : [], [kpis]);
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div>
         <h2 className="text-xl font-bold text-slate-900">Dashboard</h2>
         <p className="text-sm text-slate-500 mt-0.5">Business overview for this month</p>
       </div>
 
-      {lowStockProducts.length > 0 && (
+      {/* Fix #2: low stock products now sourced from kpis — no separate getProducts call */}
+      {kpis?.low_stock_products && kpis.low_stock_products.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -99,10 +94,10 @@ export default function AdminDashboardPage() {
         >
           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 animate-pulse" />
           <span className="text-amber-800 font-semibold">
-            {lowStockProducts.length} item{lowStockProducts.length > 1 ? "s" : ""} low on stock:
+            {kpis.low_stock_products.length} item{kpis.low_stock_products.length > 1 ? "s" : ""} low on stock:
           </span>
           <span className="text-amber-700 truncate flex-1">
-            {lowStockProducts.map((p) => p.name).join(" · ")}
+            {kpis.low_stock_products.map((p) => p.name).join(" · ")}
           </span>
         </motion.div>
       )}
@@ -113,7 +108,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick analytics links */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Sales Analytics", sub: "Revenue, trends, top products", href: "/admin/analytics", color: "border-l-4 border-brand-500" },
           { label: "Profit & Loss", sub: "Monthly P&L statement", href: "/admin/profit-loss", color: "border-l-4 border-emerald-500" },

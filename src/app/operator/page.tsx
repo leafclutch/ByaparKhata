@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ShoppingCart, PackageSearch, DollarSign, Package, AlertTriangle, ArrowRight, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { getSales } from "@/lib/services/sales";
 import { getPurchases } from "@/lib/services/purchases";
-import { getExpenses } from "@/lib/services/expenses";
 import { getProducts } from "@/lib/services/products";
 import { formatNPR, formatDate, getStockStatus, getDateRange } from "@/lib/utils";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import type { Sale, Purchase, Expense, Product } from "@/lib/types";
+import type { Sale, Purchase, Product } from "@/lib/types";
 
 const quickActions = [
   { href: "/operator/sales/new", icon: ShoppingCart, label: "New Sale", desc: "Record a sale transaction", color: "bg-brand-600 hover:bg-brand-700 text-white" },
@@ -20,36 +20,39 @@ const quickActions = [
   { href: "/operator/products", icon: Package, label: "Manage Products", desc: "Add or edit products", color: "bg-violet-600 hover:bg-violet-700 text-white" },
 ];
 
+// Fix #7: date-scoped queries (35 days) — eliminates 1100+ row fetches for "today" sums
+// Fix #7: removed dead getExpenses fetch — expenses are not displayed on this page
 export default function OperatorDashboardPage() {
   const { user } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id || !user?.id) return;
     const cid = user.company_id;
-    Promise.all([getSales(cid), getPurchases(cid), getExpenses(cid), getProducts(cid)])
-      .then(([s, p, e, pr]) => { setSales(s); setPurchases(p); setExpenses(e); setProducts(pr); })
-      .catch(() => {});
-  }, [user]);
+    const thirtyFiveDaysAgo = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    Promise.all([
+      getSales(cid, { operator_id: user.id, from_date: thirtyFiveDaysAgo }),
+      getPurchases(cid, { operator_id: user.id, from_date: thirtyFiveDaysAgo }),
+      getProducts(cid),
+    ])
+      .then(([s, p, pr]) => { setSales(s); setPurchases(p); setProducts(pr); })
+      .catch((err) => {
+        console.error("[operator dashboard]", err);
+        toast.error("Failed to load dashboard data.");
+      });
+  }, [user?.company_id, user?.id]);
 
-  // Date ranges
   const today = new Date().toISOString().split("T")[0];
   const weekRange = getDateRange("7days");
   const monthRange = getDateRange("month");
 
-  // Helper: filter by date and operator
-  const myId = user?.id ?? "";
-  const mySales = sales.filter((s) => s.operator_id === myId);
-  const myPurchases = purchases.filter((p) => p.operator_id === myId);
-
   function salesInRange(from: string, to: string) {
-    return mySales.filter((s) => s.created_at >= `${from}T00:00:00` && s.created_at <= `${to}T23:59:59`);
+    return sales.filter((s) => s.created_at >= `${from}T00:00:00` && s.created_at <= `${to}T23:59:59`);
   }
   function purchasesInRange(from: string, to: string) {
-    return myPurchases.filter((p) => p.purchased_at >= `${from}T00:00:00` && p.purchased_at <= `${to}T23:59:59`);
+    return purchases.filter((p) => p.purchased_at >= `${from}T00:00:00` && p.purchased_at <= `${to}T23:59:59`);
   }
 
   const todaySales = salesInRange(today, today);
@@ -87,7 +90,7 @@ export default function OperatorDashboardPage() {
         </motion.div>
       )}
 
-      {/* Quick Access: Sales */}
+      {/* Sales Overview */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-slate-700">Sales Overview</h3>
@@ -95,12 +98,12 @@ export default function OperatorDashboardPage() {
             Full History <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "Today", value: sum(todaySales, "grand_total"), count: todaySales.length, period: "today", color: "brand" },
             { label: "This Week", value: sum(weekSales, "grand_total"), count: weekSales.length, period: "7days", color: "indigo" },
             { label: "This Month", value: sum(monthSales, "grand_total"), count: monthSales.length, period: "month", color: "violet" },
-            { label: "All Loaded", value: sum(mySales, "grand_total"), count: mySales.length, period: "all", color: "slate" },
+            { label: "All Loaded", value: sum(sales, "grand_total"), count: sales.length, period: "all", color: "slate" },
           ].map((card, i) => (
             <motion.div key={card.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
               <Link href={`/operator/sales?period=${card.period}`}
@@ -118,7 +121,7 @@ export default function OperatorDashboardPage() {
         </div>
       </div>
 
-      {/* Quick Access: Purchases */}
+      {/* Purchase Overview */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-slate-700">Purchase Overview</h3>
@@ -126,12 +129,12 @@ export default function OperatorDashboardPage() {
             Full History <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "Today", value: sum(todayPurchases, "total_cost"), count: todayPurchases.length, period: "today" },
             { label: "This Week", value: sum(weekPurchases, "total_cost"), count: weekPurchases.length, period: "7days" },
             { label: "This Month", value: sum(monthPurchases, "total_cost"), count: monthPurchases.length, period: "month" },
-            { label: "All Loaded", value: sum(myPurchases, "total_cost"), count: myPurchases.length, period: "all" },
+            { label: "All Loaded", value: sum(purchases, "total_cost"), count: purchases.length, period: "all" },
           ].map((card, i) => (
             <motion.div key={card.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.05 }}>
               <Link href={`/operator/purchases?period=${card.period}`}
@@ -152,7 +155,7 @@ export default function OperatorDashboardPage() {
       {/* Quick Actions */}
       <div>
         <h3 className="text-sm font-bold text-slate-700 mb-3">Quick Actions</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map((action, i) => (
             <motion.div key={action.href} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + i * 0.06 }}>
               <Link href={action.href} className={`flex flex-col gap-3 p-4 rounded-2xl transition-all duration-150 group ${action.color}`}>
@@ -174,14 +177,14 @@ export default function OperatorDashboardPage() {
           <h3 className="text-sm font-bold text-slate-800">My Recent Sales</h3>
           <Link href="/operator/sales?period=month" className="text-xs text-brand-600 font-medium hover:underline">View all</Link>
         </div>
-        {mySales.length === 0 ? (
+        {sales.length === 0 ? (
           <div className="py-10 text-center">
             <ShoppingCart className="w-8 h-8 text-slate-200 mx-auto mb-2" />
             <p className="text-sm text-slate-400">No sales recorded yet</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
-            {mySales.slice(0, 5).map((sale) => (
+            {sales.slice(0, 5).map((sale) => (
               <div key={sale.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/70 transition-colors">
                 <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
                   <ShoppingCart className="w-4 h-4 text-brand-600" />

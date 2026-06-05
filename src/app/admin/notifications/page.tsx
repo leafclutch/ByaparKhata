@@ -1,15 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, CheckCheck, AlertTriangle, Info, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from "@/lib/services/notifications";
-import { timeAgo } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-import type { Notification } from "@/lib/types";
+import { markNotificationRead, markAllNotificationsRead } from "@/lib/services/notifications";
+import { useNotificationsStore } from "@/store/notificationsStore";
+import { timeAgo, cn } from "@/lib/utils";
 
 const typeConfig: Record<string, { icon: React.ElementType; bg: string; text: string; dot: string }> = {
   alert: { icon: AlertTriangle, bg: "bg-rose-50", text: "text-rose-700", dot: "bg-rose-500" },
@@ -18,27 +15,21 @@ const typeConfig: Record<string, { icon: React.ElementType; bg: string; text: st
   success: { icon: CheckCircle2, bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
 };
 
+// Fix #18: reads from shared store — no duplicate getNotifications call
 export default function NotificationsPage() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications, setNotifications } = useNotificationsStore();
   const unreadCount = notifications.filter((n) => !n.is_read).length;
-
-  useEffect(() => {
-    if (!user) return;
-    getNotifications(user.company_id)
-      .then(setNotifications)
-      .catch(() => toast.error("Failed to load notifications."));
-  }, [user]);
 
   async function markAllRead() {
     if (!user) return;
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    try { await markAllNotificationsRead(user.company_id); } catch { /* optimistic update already done */ }
+    setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
+    try { await markAllNotificationsRead(user.company_id); } catch {}
   }
 
   async function markRead(id: string) {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
-    try { await markNotificationRead(id); } catch { /* optimistic */ }
+    setNotifications(notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    try { await markNotificationRead(id); } catch {}
   }
 
   return (

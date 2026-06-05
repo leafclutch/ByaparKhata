@@ -52,25 +52,41 @@ export default function ActivityPage() {
   const [filterEntity, setFilterEntity] = useState("all");
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
+  // Pending states for date inputs — debounced before triggering a query
+  const [pendingFrom, setPendingFrom] = useState("");
+  const [pendingTo, setPendingTo] = useState("");
   const [search, setSearch] = useState("");
+
+  // Load team once on mount — team doesn't change with filter selections
+  useEffect(() => {
+    if (!user?.company_id) return;
+    getCompanyTeam(user.company_id).then(setTeam).catch(() => {});
+  }, [user?.company_id]);
+
+  // Debounce date inputs: wait 400ms after user stops typing before applying
+  useEffect(() => {
+    const id = setTimeout(() => setFilterFrom(pendingFrom), 400);
+    return () => clearTimeout(id);
+  }, [pendingFrom]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setFilterTo(pendingTo), 400);
+    return () => clearTimeout(id);
+  }, [pendingTo]);
 
   const loadLogs = useCallback(async () => {
     if (!user?.company_id) return;
     setLoading(true);
     try {
-      const [fetchedLogs, fetchedTeam] = await Promise.all([
-        getActivityLogs(user.company_id, {
-          user_id: filterUser !== "all" ? filterUser : undefined,
-          user_role: filterRole !== "all" ? filterRole : undefined,
-          action: filterAction !== "all" ? (filterAction as ActivityAction) : undefined,
-          entity_type: filterEntity !== "all" ? (filterEntity as ActivityEntityType) : undefined,
-          from_date: filterFrom || undefined,
-          to_date: filterTo || undefined,
-        }),
-        getCompanyTeam(user.company_id),
-      ]);
+      const fetchedLogs = await getActivityLogs(user.company_id, {
+        user_id: filterUser !== "all" ? filterUser : undefined,
+        user_role: filterRole !== "all" ? filterRole : undefined,
+        action: filterAction !== "all" ? (filterAction as ActivityAction) : undefined,
+        entity_type: filterEntity !== "all" ? (filterEntity as ActivityEntityType) : undefined,
+        from_date: filterFrom || undefined,
+        to_date: filterTo || undefined,
+      });
       setLogs(fetchedLogs);
-      setTeam(fetchedTeam);
     } catch {
       // silent
     } finally {
@@ -93,12 +109,12 @@ export default function ActivityPage() {
     setFilterRole("all");
     setFilterAction("all");
     setFilterEntity("all");
-    setFilterFrom("");
-    setFilterTo("");
+    setPendingFrom(""); setFilterFrom("");
+    setPendingTo(""); setFilterTo("");
     setSearch("");
   }
 
-  const hasFilters = filterUser !== "all" || filterRole !== "all" || filterAction !== "all" || filterEntity !== "all" || filterFrom || filterTo || search;
+  const hasFilters = filterUser !== "all" || filterRole !== "all" || filterAction !== "all" || filterEntity !== "all" || pendingFrom || pendingTo || search;
 
   return (
     <div className="space-y-5">
@@ -174,8 +190,8 @@ export default function ActivityPage() {
           </Select>
 
           <div className="flex gap-1.5">
-            <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="h-9 text-xs" title="From date" />
-            <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="h-9 text-xs" title="To date" />
+            <Input type="date" value={pendingFrom} onChange={(e) => setPendingFrom(e.target.value)} className="h-9 text-xs" title="From date" />
+            <Input type="date" value={pendingTo} onChange={(e) => setPendingTo(e.target.value)} className="h-9 text-xs" title="To date" />
           </div>
         </div>
       </motion.div>
@@ -197,11 +213,11 @@ export default function ActivityPage() {
           <table className="w-full text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-slate-100 bg-slate-50">
-                {["Timestamp", "User", "Action", "Type", "Details"].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-                    {h}
-                  </th>
-                ))}
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">Timestamp</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">User</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Action</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">Type</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -218,7 +234,7 @@ export default function ActivityPage() {
               )}
               {!loading && displayed.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{formatDateTime(log.created_at)}</td>
+                  <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap hidden md:table-cell">{formatDateTime(log.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
@@ -237,7 +253,7 @@ export default function ActivityPage() {
                       {ACTION_LABELS[log.action]}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
                       {ENTITY_LABELS[log.entity_type] ?? log.entity_type}
                     </span>

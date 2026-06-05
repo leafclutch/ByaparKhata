@@ -7,6 +7,7 @@ import { RevenueAreaChart } from "@/components/charts/RevenueAreaChart";
 import { ExpenseDonutChart } from "@/components/charts/ExpenseDonutChart";
 import { useAuth } from "@/hooks/useAuth";
 import { getMonthlyRevenue, getExpenseBreakdown } from "@/lib/services/analytics";
+import { toast } from "sonner";
 import { formatNPR, formatNPRCompact } from "@/lib/utils";
 import type { MonthlyData, CategoryBreakdown } from "@/lib/types";
 
@@ -16,12 +17,15 @@ export default function ProfitLossPage() {
   const [expenseBreakdown, setExpenseBreakdown] = useState<CategoryBreakdown[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id) return;
     const cid = user.company_id;
     Promise.all([getMonthlyRevenue(cid, 6), getExpenseBreakdown(cid)])
       .then(([m, e]) => { setMonthlyData(m); setExpenseBreakdown(e); })
-      .catch(() => {});
-  }, [user]);
+      .catch((err) => {
+        console.error("[profit-loss]", err);
+        toast.error("Failed to load P&L data.");
+      });
+  }, [user?.company_id]);
 
   const plData = monthlyData.map((m) => ({
     month: m.month,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Edit2, Trash2, Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,14 +66,15 @@ export default function ProductsPage() {
   const isAdmin = user?.role === "admin";
   const [autoSku, setAutoSku] = useState(true);
 
+  // Fix #15: primitive dep [user?.company_id] prevents extra fetch on token refresh
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id) return;
     setLoading(true);
     Promise.all([getProducts(user.company_id), getCategories(user.company_id)])
       .then(([prods, cats]) => { setProducts(prods); setCategories(cats); })
       .catch(() => toast.error("Failed to load products."))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user?.company_id]);
 
   const filtered = useMemo(
     () => products.filter(
@@ -202,9 +203,9 @@ export default function ProductsPage() {
               {loading && (
                 <tr><td colSpan={10} className="px-4 py-12 text-center text-sm text-slate-400">Loading products…</td></tr>
               )}
-              <AnimatePresence>
-                {!loading && filtered.map((product, i) => (
-                  <motion.tr key={product.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.03 }} className="hover:bg-slate-50 transition-colors">
+              {/* Fix #14: removed per-row AnimatePresence+motion.tr stagger — 200ms+ savings on large catalogues */}
+              {!loading && filtered.map((product) => (
+                  <tr key={product.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3"><code className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{product.sku}</code></td>
                     <td className="px-4 py-3 font-medium text-slate-800 max-w-[180px] truncate">{product.name}</td>
                     <td className="px-4 py-3"><span className="text-xs text-slate-500">{product.category?.name ?? "—"}</span></td>
@@ -220,9 +221,8 @@ export default function ProductsPage() {
                         <button onClick={() => setDeleteId(product.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
+                  </tr>
+              ))}
               {!loading && filtered.length === 0 && (
                 <tr><td colSpan={10} className="px-4 py-12 text-center"><Package className="w-8 h-8 text-slate-200 mx-auto mb-2" /><p className="text-sm text-slate-400">No products found</p></td></tr>
               )}

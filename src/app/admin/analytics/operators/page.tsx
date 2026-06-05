@@ -37,7 +37,7 @@ export default function OperatorAnalyticsPage() {
       </div>
 
       {/* Summary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Team Members", value: String(stats.length), icon: Users, color: "indigo" },
           { label: "Total Sales", value: String(totalSalesCount), icon: ShoppingCart, color: "emerald" },
@@ -48,7 +48,7 @@ export default function OperatorAnalyticsPage() {
             key={card.label}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.06 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm"
           >
             <p className="text-xs text-slate-500 mb-2">{card.label}</p>
@@ -91,12 +91,9 @@ export default function OperatorAnalyticsPage() {
                   </td>
                 </tr>
               )}
-              {!loading && stats.map((s, i) => (
-                <motion.tr
+              {!loading && stats.map((s) => (
+                <tr
                   key={s.user_id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.04 }}
                   className="hover:bg-slate-50 transition-colors"
                 >
                   <td className="px-5 py-4">
@@ -128,7 +125,7 @@ export default function OperatorAnalyticsPage() {
                   <td className="px-5 py-4 text-xs text-slate-400">
                     {s.last_active ? timeAgo(s.last_active) : <span className="text-slate-300">—</span>}
                   </td>
-                </motion.tr>
+                </tr>
               ))}
             </tbody>
           </table>

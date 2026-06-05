@@ -15,9 +15,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { getPurchases, createPurchase, deletePurchase } from "@/lib/services/purchases";
 import { getProducts } from "@/lib/services/products";
-import { getCompanyTeam } from "@/lib/services/company";
 import { formatNPR, formatDate, PAYMENT_METHOD_LABELS, getDateRange, downloadCSV, cn } from "@/lib/utils";
-import type { Purchase, Product, AppUser, PaymentMethod } from "@/lib/types";
+import type { Purchase, Product, PaymentMethod } from "@/lib/types";
 import type { DatePeriod } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
@@ -56,11 +55,9 @@ function PurchaseHistoryContent() {
 
   const [allPurchases, setAllPurchases] = useState<Purchase[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [team, setTeam] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [filterOperator, setFilterOperator] = useState("all");
   const [filterPayment, setFilterPayment] = useState("all");
   const [page, setPage] = useState(1);
 
@@ -70,22 +67,21 @@ function PurchaseHistoryContent() {
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Load products once — they don't change with date period
+  useEffect(() => {
+    if (!user?.company_id) return;
+    getProducts(user.company_id).then(setProducts).catch(() => {});
+  }, [user?.company_id]);
+
   const loadData = useCallback(async () => {
     if (!user?.company_id) return;
     setLoading(true);
     const { from, to } = getDateRange(period, customFrom, customTo);
     try {
-      const [purs, prods, members] = await Promise.all([
-        getPurchases(user.company_id, {
-          from_date: from || undefined,
-          to_date: to || undefined,
-        }),
-        getProducts(user.company_id),
-        getCompanyTeam(user.company_id),
-      ]);
-      setAllPurchases(purs);
-      setProducts(prods);
-      setTeam(members);
+      setAllPurchases(await getPurchases(user.company_id, {
+        from_date: from || undefined,
+        to_date: to || undefined,
+      }));
     } catch {
       toast.error("Failed to load purchases.");
     } finally {
@@ -97,7 +93,6 @@ function PurchaseHistoryContent() {
 
   const filtered = useMemo(() => {
     return allPurchases.filter((p) => {
-      if (filterOperator !== "all" && p.operator_id !== filterOperator) return false;
       if (filterPayment !== "all" && p.payment_method !== filterPayment) return false;
       if (search) {
         const q = search.toLowerCase();
@@ -107,15 +102,15 @@ function PurchaseHistoryContent() {
       }
       return true;
     });
-  }, [allPurchases, filterOperator, filterPayment, search]);
+  }, [allPurchases, filterPayment, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalCost = filtered.reduce((s, r) => s + r.total_cost, 0);
-  const hasFilters = search || filterOperator !== "all" || filterPayment !== "all";
+  const hasFilters = search || filterPayment !== "all";
 
   function resetFilters() {
-    setSearch(""); setFilterOperator("all"); setFilterPayment("all"); setPage(1);
+    setSearch(""); setFilterPayment("all"); setPage(1);
   }
 
   const selectedProduct = products.find((p) => p.id === form.product_id);
@@ -271,13 +266,6 @@ function PurchaseHistoryContent() {
               className="pl-8 h-9 text-sm bg-slate-50"
             />
           </div>
-          <Select value={filterOperator} onValueChange={(v) => { setFilterOperator(v); setPage(1); }}>
-            <SelectTrigger className="h-9 text-sm w-44"><SelectValue placeholder="All Users" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Users</SelectItem>
-              {team.map((m) => <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
           <Select value={filterPayment} onValueChange={(v) => { setFilterPayment(v); setPage(1); }}>
             <SelectTrigger className="h-9 text-sm w-40"><SelectValue placeholder="All Payments" /></SelectTrigger>
             <SelectContent>
@@ -315,11 +303,15 @@ function PurchaseHistoryContent() {
           <table className="w-full text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-10">
               <tr>
-                {["Invoice", "Supplier", "Product", "Qty", "Total", "Payment", "Created By", "Date", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">
-                    {h}
-                  </th>
-                ))}
+                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap hidden sm:table-cell">Invoice</th>
+                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">Supplier</th>
+                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">Product</th>
+                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">Qty</th>
+                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">Total</th>
+                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">Payment</th>
+                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap hidden md:table-cell">Created By</th>
+                <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200 whitespace-nowrap">Date</th>
+                <th className="px-4 py-3 bg-slate-50 border-b border-slate-200" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -334,7 +326,7 @@ function PurchaseHistoryContent() {
               )}
               {!loading && paginated.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="px-4 py-3.5"><code className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{p.invoice_number ?? "—"}</code></td>
+                  <td className="px-4 py-3.5 hidden sm:table-cell"><code className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{p.invoice_number ?? "—"}</code></td>
                   <td className="px-4 py-3.5 font-medium text-slate-800">{p.supplier_name}</td>
                   <td className="px-4 py-3.5 text-slate-600">{p.product_name}</td>
                   <td className="px-4 py-3.5 text-slate-700">×{p.quantity}</td>
@@ -351,7 +343,7 @@ function PurchaseHistoryContent() {
                       <StatusBadge status={p.payment_method as any} />
                     )}
                   </td>
-                  <td className="px-4 py-3.5 text-xs text-slate-500">{p.operator?.full_name ?? "—"}</td>
+                  <td className="px-4 py-3.5 text-xs text-slate-500 hidden md:table-cell">{p.operator?.full_name ?? "—"}</td>
                   <td className="px-4 py-3.5 text-xs text-slate-400 whitespace-nowrap">{formatDate(p.purchased_at)}</td>
                   <td className="px-4 py-3.5">
                     <button onClick={() => setPurchaseToDelete(p)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">

@@ -64,8 +64,8 @@ export default function SettingsPage() {
                 { label: "Address", value: company?.address ?? "—" },
                 { label: "Timezone", value: company?.timezone ?? "Asia/Kathmandu" },
               ].map((field) => (
-                <div key={field.label} className="flex items-start gap-4 py-3 border-b border-slate-50 last:border-0">
-                  <span className="text-sm text-slate-400 w-36 flex-shrink-0">{field.label}</span>
+                <div key={field.label} className="flex flex-col sm:flex-row items-start gap-1 sm:gap-4 py-3 border-b border-slate-50 last:border-0">
+                  <span className="text-sm text-slate-400 sm:w-36 sm:flex-shrink-0">{field.label}</span>
                   <span className="text-sm font-medium text-slate-800">{field.value}</span>
                 </div>
               ))}
