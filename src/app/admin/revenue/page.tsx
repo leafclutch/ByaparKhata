@@ -6,22 +6,26 @@ import { TrendingUp, ArrowUpRight } from "lucide-react";
 import { RevenueAreaChart } from "@/components/charts/RevenueAreaChart";
 import { SalesBarChart } from "@/components/charts/SalesBarChart";
 import { useAuth } from "@/hooks/useAuth";
-import { getDashboardKPIs, getMonthlyRevenue } from "@/lib/services/analytics";
+import { getMTDRevenue, getMonthlyRevenue } from "@/lib/services/analytics";
+import { toast } from "sonner";
 import { formatNPR, formatNPRCompact } from "@/lib/utils";
-import type { DashboardKPIs, MonthlyData } from "@/lib/types";
+import type { MonthlyData } from "@/lib/types";
 
 export default function RevenuePage() {
   const { user } = useAuth();
-  const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [mtd, setMtd] = useState<{ total: number; change: number } | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id) return;
     const cid = user.company_id;
-    Promise.all([getDashboardKPIs(cid), getMonthlyRevenue(cid, 6)])
-      .then(([k, m]) => { setKpis(k); setMonthlyData(m); })
-      .catch(() => {});
-  }, [user]);
+    Promise.all([getMTDRevenue(cid), getMonthlyRevenue(cid, 6)])
+      .then(([m, monthly]) => { setMtd(m); setMonthlyData(monthly); })
+      .catch((err) => {
+        console.error("[revenue]", err);
+        toast.error("Failed to load revenue data.");
+      });
+  }, [user?.company_id]);
 
   const monthlyTotals = monthlyData.map((m, i, arr) => ({
     ...m,
@@ -33,7 +37,7 @@ export default function RevenuePage() {
   const ytd = monthlyData.reduce((s, m) => s + m.sales, 0);
 
   const summaryCards = [
-    { label: "Total Revenue (MTD)", value: kpis?.total_sales ?? 0, change: kpis?.sales_change ?? null, color: "emerald" },
+    { label: "Total Revenue (MTD)", value: mtd?.total ?? 0, change: mtd?.change ?? null, color: "emerald" },
     { label: "Avg Monthly Revenue", value: avgMonthly, change: null, color: "blue" },
     { label: "Best Month", value: bestMonth, change: null, color: "violet" },
     { label: "YTD Revenue", value: ytd, change: null, color: "indigo" },
@@ -78,10 +82,10 @@ export default function RevenuePage() {
             <h3 className="text-sm font-semibold text-slate-800">Revenue Trend</h3>
             <p className="text-xs text-slate-400">Monthly sales revenue — last 6 months</p>
           </div>
-          {kpis && kpis.sales_change !== 0 && (
+          {mtd && mtd.change !== 0 && (
             <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
               <TrendingUp className="w-3.5 h-3.5" />
-              +{kpis.sales_change}% growth
+              +{mtd.change}% growth
             </div>
           )}
         </div>

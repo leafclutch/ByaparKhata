@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#4f46e5" />
+  <title>You're Offline — HamroHisab</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand: #4f46e5;
+      --brand-light: #eef2ff;
+      --slate-900: #0f172a;
+      --slate-600: #475569;
+      --slate-400: #94a3b8;
+      --slate-100: #f1f5f9;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--slate-100);
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 1.5rem;
+      padding: 3rem 2.5rem;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 8px 32px rgba(79,70,229,.08);
+    }
+
+    .icon-wrap {
+      width: 72px;
+      height: 72px;
+      background: var(--brand-light);
+      border-radius: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+
+    .icon-wrap svg { color: var(--brand); }
+
+    h1 {
+      font-size: 1.375rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .message {
+      font-size: 0.9375rem;
+      color: var(--slate-600);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .alert {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 0.875rem;
+      padding: 1rem 1.25rem;
+      font-size: 0.875rem;
+      color: #9a3412;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
+    .alert strong { display: block; margin-bottom: 0.25rem; font-weight: 700; }
+
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--brand);
+      color: #fff;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .retry-btn:hover { background: #4338ca; }
+
+    .brand {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: var(--slate-400);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrap">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
+
+    <h1>You're Offline</h1>
+    <p class="message">
+      HamroHisab requires an internet connection to display live business data.
+    </p>
+
+    <div class="alert">
+      <strong>Live business data unavailable</strong>
+      Sales, inventory, purchases, and analytics cannot be shown while offline.
+      Your data is safe — reconnect to continue.
+    </div>
+
+    <button class="retry-btn" onclick="window.location.reload()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+      Try Again
+    </button>
+
+    <p class="brand">HamroHisab &mdash; Leafclutch Technologies</p>
+  </div>
+</body>
+</html>

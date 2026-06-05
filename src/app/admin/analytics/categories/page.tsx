@@ -21,11 +21,14 @@ export default function CategoryAnalyticsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id) return;
     getCategoryAnalytics(user.company_id)
       .then(setStats)
+      .catch((err) => {
+        console.error("[category analytics]", err);
+      })
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user?.company_id]);
 
   const bestSelling = [...stats].sort((a, b) => b.total_sales - a.total_sales)[0];
   const outOfStockCats = stats.filter(s => s.product_count > 0 && s.inventory_value === 0).length;
@@ -43,8 +46,8 @@ export default function CategoryAnalyticsPage() {
     { key: "name", header: "Category", render: (r: CategoryStat) => <span className="font-bold text-slate-800">{r.name}</span> },
     { key: "product_count", header: "Products", render: (r: CategoryStat) => <span className="text-slate-600">{r.product_count}</span> },
     { key: "total_sales", header: "Total Sales", render: (r: CategoryStat) => <span className="font-bold text-emerald-600">{formatNPR(r.total_sales)}</span> },
-    { key: "total_purchases", header: "Purchases", render: (r: CategoryStat) => <span className="text-slate-600">{formatNPR(r.total_purchases)}</span> },
-    { key: "inventory_value", header: "Stock Value", render: (r: CategoryStat) => <span className="font-semibold text-slate-700">{formatNPR(r.inventory_value)}</span> },
+    { key: "total_purchases", header: "Purchases", hideBelow: "md" as const, render: (r: CategoryStat) => <span className="text-slate-600">{formatNPR(r.total_purchases)}</span> },
+    { key: "inventory_value", header: "Stock Value", hideBelow: "md" as const, render: (r: CategoryStat) => <span className="font-semibold text-slate-700">{formatNPR(r.inventory_value)}</span> },
   ];
 
   return (

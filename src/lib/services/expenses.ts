@@ -1,14 +1,22 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Expense, ExpenseCategory, PaymentMethod } from "@/lib/types";
 
-export async function getExpenses(companyId: string): Promise<Expense[]> {
+export interface ExpensesFilters {
+  operator_id?: string;
+}
+
+export async function getExpenses(companyId: string, filters?: ExpensesFilters): Promise<Expense[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("expenses")
     .select("*, operator:users(id, full_name, email, role)")
     .eq("company_id", companyId)
     .order("expense_date", { ascending: false })
     .limit(100);
+
+  if (filters?.operator_id) query = query.eq("operator_id", filters.operator_id);
+
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }

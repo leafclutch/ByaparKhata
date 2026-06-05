@@ -68,7 +68,7 @@ export default function SASettingsPage() {
           </div>
           <div className="space-y-1.5">
             <Label>Contact Number</Label>
-            <Input value={form.contact_number} onChange={(e) => setForm((f) => ({ ...f, contact_number: e.target.value }))} placeholder="+91 98765 43210" />
+            <Input value={form.contact_number} onChange={(e) => setForm((f) => ({ ...f, contact_number: e.target.value }))} placeholder="+977 98XXXXXXXX" />
           </div>
           <Button type="submit" disabled={saving} className="bg-indigo-600 hover:bg-indigo-700">
             {saving ? "Saving…" : "Save Changes"}

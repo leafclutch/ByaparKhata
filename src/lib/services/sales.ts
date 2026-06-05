@@ -12,9 +12,10 @@ export interface SalesFilters {
 
 export async function getSales(companyId: string, filters?: SalesFilters): Promise<Sale[]> {
   const supabase = createClient();
+  // Fix #20: explicit column list instead of select("*")
   let query = supabase
     .from("sales")
-    .select("*, items:sale_items(*), operator:users(id, full_name, email, role)")
+    .select("id, company_id, operator_id, invoice_number, customer_name, subtotal, discount, grand_total, payment_method, cash_amount, online_amount, notes, created_at, operator:users(id, full_name, email, role)")
     .eq("company_id", companyId)
     .order("created_at", { ascending: false })
     .limit(500);
@@ -26,7 +27,7 @@ export async function getSales(companyId: string, filters?: SalesFilters): Promi
 
   const { data, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as Sale[];
 }
 
 export async function getSaleWithItems(saleId: string): Promise<Sale | null> {
@@ -111,13 +112,13 @@ export async function createSale(input: CreateSaleInput, cartItems: CartItem[], 
     (currentProducts ?? []).map((p) => [p.id, p.quantity])
   );
 
-  await Promise.all(
-    cartItems.map((item) =>
-      supabase
-        .from("products")
-        .update({ quantity: productQtyMap[item.product.id] - item.quantity })
-        .eq("id", item.product.id)
-    )
+  // Fix #9: batch upsert — 1 HTTP request instead of N
+  await supabase.from("products").upsert(
+    cartItems.map((item) => ({
+      id: item.product.id,
+      quantity: productQtyMap[item.product.id] - item.quantity,
+    })),
+    { onConflict: "id" }
   );
 
   await supabase.from("inventory_transactions").insert(
@@ -168,13 +169,13 @@ export async function updateSale(id: string, updates: Partial<CreateSaleInput>, 
       .in("id", oldProductIds);
     const oldQtyMap = Object.fromEntries((oldProducts ?? []).map((p) => [p.id, p.quantity]));
 
-    await Promise.all(
-      (old.items ?? []).map((item: { product_id: string; quantity: number }) =>
-        supabase
-          .from("products")
-          .update({ quantity: (oldQtyMap[item.product_id] ?? 0) + item.quantity })
-          .eq("id", item.product_id)
-      )
+    // Fix #9: batch upsert — restore old stock in 1 request
+    await supabase.from("products").upsert(
+      (old.items ?? []).map((item: { product_id: string; quantity: number }) => ({
+        id: item.product_id,
+        quantity: (oldQtyMap[item.product_id] ?? 0) + item.quantity,
+      })),
+      { onConflict: "id" }
     );
 
     const newProductIds = cartItems.map((i) => i.product.id);
@@ -209,13 +210,13 @@ export async function updateSale(id: string, updates: Partial<CreateSaleInput>, 
       (currentProducts ?? []).map((p) => [p.id, p.quantity])
     );
 
-    await Promise.all(
-      cartItems.map((item) =>
-        supabase
-          .from("products")
-          .update({ quantity: currentQtyMap[item.product.id] - item.quantity })
-          .eq("id", item.product.id)
-      )
+    // Fix #9: batch upsert — deduct new stock in 1 request
+    await supabase.from("products").upsert(
+      cartItems.map((item) => ({
+        id: item.product.id,
+        quantity: currentQtyMap[item.product.id] - item.quantity,
+      })),
+      { onConflict: "id" }
     );
 
     await supabase.from("inventory_transactions").insert(
@@ -275,13 +276,13 @@ export async function deleteSale(saleId: string, actor?: Actor): Promise<void> {
     .in("id", productIds);
   const qtyMap = Object.fromEntries((currentProducts ?? []).map((p) => [p.id, p.quantity]));
 
-  await Promise.all(
-    items.map((item: { product_id: string; quantity: number }) =>
-      supabase
-        .from("products")
-        .update({ quantity: (qtyMap[item.product_id] ?? 0) + item.quantity })
-        .eq("id", item.product_id)
-    )
+  // Fix #9: batch upsert — restore stock on delete in 1 request
+  await supabase.from("products").upsert(
+    items.map((item: { product_id: string; quantity: number }) => ({
+      id: item.product_id,
+      quantity: (qtyMap[item.product_id] ?? 0) + item.quantity,
+    })),
+    { onConflict: "id" }
   );
 
   await supabase.from("inventory_transactions").insert(

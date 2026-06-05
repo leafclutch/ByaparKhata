@@ -15,9 +15,7 @@ import { cn, getInitials } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { getNotifications } from "@/lib/services/notifications";
-import { useState, useEffect } from "react";
-import type { Notification } from "@/lib/types";
+import { useEffect, useState } from "react";
 
 type NavItem = {
   label: string;
@@ -67,18 +65,12 @@ async function handleSignOut() {
   window.location.assign("/login");
 }
 
-export function AdminSidebar() {
+export function AdminSidebar({ unreadCount = 0 }: { unreadCount?: number }) {
   const pathname = usePathname();
   const { sidebarOpen, setSidebarOpen } = useUIStore();
   const { user: authUser } = useAuth();
   const company = useCompany();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["Reports"]);
-
-  useEffect(() => {
-    if (!authUser?.company_id) return;
-    getNotifications(authUser.company_id).then(setNotifications).catch(() => {});
-  }, [authUser?.company_id]);
 
   useEffect(() => {
     const toExpand: string[] = [];
@@ -93,8 +85,6 @@ export function AdminSidebar() {
       setExpandedGroups((prev) => Array.from(new Set([...prev, ...toExpand])));
     }
   }, [pathname]);
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const isActive = (href?: string) =>
     href === "/admin" ? pathname === "/admin" : href ? pathname.startsWith(href) : false;

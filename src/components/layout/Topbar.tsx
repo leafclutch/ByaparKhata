@@ -59,7 +59,7 @@ export function Topbar({ title, user, actions }: TopbarProps) {
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-0 shadow-xl rounded-xl border-slate-100">
+          <PopoverContent align="end" className="w-[min(320px,calc(100vw-2rem))] p-0 shadow-xl rounded-xl border-slate-100">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
               <span className="font-semibold text-sm text-slate-800">Notifications</span>
               {unread.length > 0 && (

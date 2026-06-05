@@ -5,7 +5,7 @@ export async function getCategories(companyId: string): Promise<Category[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("categories")
-    .select("*")
+    .select("id, name, slug, color, level, parent_id, company_id, created_at")
     .eq("company_id", companyId)
     .order("level")
     .order("name");

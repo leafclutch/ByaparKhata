@@ -82,7 +82,7 @@ export function KPICard({
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.07, ease: "easeOut" }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
       className="group relative bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
     >
       {/* Subtle top gradient accent */}

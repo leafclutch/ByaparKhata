@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,12 +40,12 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.company_id) return;
     getExpenses(user.company_id)
       .then(setExpenses)
       .catch(() => toast.error("Failed to load expenses."))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user?.company_id]);
 
   const total = expenses.reduce((s, e) => s + e.amount, 0);
 
@@ -104,18 +104,16 @@ export default function ExpensesPage() {
               {loading && (
                 <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-slate-400">Loading…</td></tr>
               )}
-              <AnimatePresence>
-                {!loading && expenses.map((exp, i) => (
-                  <motion.tr key={exp.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3"><StatusBadge status={exp.category} /></td>
-                    <td className="px-4 py-3 text-slate-700 max-w-[200px] truncate">{exp.description}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{exp.operator?.full_name ?? "—"}</td>
-                    <td className="px-4 py-3"><StatusBadge status={exp.payment_method} /></td>
-                    <td className="px-4 py-3 font-semibold text-rose-700">{formatNPR(exp.amount)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-400">{exp.expense_date}</td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
+              {!loading && expenses.map((exp) => (
+                <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3"><StatusBadge status={exp.category} /></td>
+                  <td className="px-4 py-3 text-slate-700 max-w-[200px] truncate">{exp.description}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{exp.operator?.full_name ?? "—"}</td>
+                  <td className="px-4 py-3"><StatusBadge status={exp.payment_method} /></td>
+                  <td className="px-4 py-3 font-semibold text-rose-700">{formatNPR(exp.amount)}</td>
+                  <td className="px-4 py-3 text-xs text-slate-400">{exp.expense_date}</td>
+                </tr>
+              ))}
               {!loading && expenses.length === 0 && (
                 <tr><td colSpan={6} className="px-4 py-12 text-center"><DollarSign className="w-8 h-8 text-slate-200 mx-auto mb-2" /><p className="text-sm text-slate-400">No expenses recorded</p></td></tr>
               )}

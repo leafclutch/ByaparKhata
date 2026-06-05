@@ -11,9 +11,10 @@ export interface PurchaseFilters {
 
 export async function getPurchases(companyId: string, filters?: PurchaseFilters): Promise<Purchase[]> {
   const supabase = createClient();
+  // Fix #20: explicit column list instead of select("*")
   let query = supabase
     .from("purchases")
-    .select("*, operator:users(id, full_name, email, role)")
+    .select("id, company_id, operator_id, supplier_name, product_id, product_name, quantity, unit_cost, total_cost, invoice_number, payment_method, cash_amount, online_amount, notes, purchased_at, operator:users(id, full_name, email, role)")
     .eq("company_id", companyId)
     .order("purchased_at", { ascending: false })
     .limit(500);
@@ -25,7 +26,7 @@ export async function getPurchases(companyId: string, filters?: PurchaseFilters)
 
   const { data, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as Purchase[];
 }
 
 export interface CreatePurchaseInput {

@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
 import type { ActivityLog, ActivityAction, ActivityEntityType, Actor, OperatorActivity } from "@/lib/types";
 
+const ACTIVITY_COLUMNS = "id, company_id, created_at, user_id, user_name, user_role, action, entity_type, entity_id, entity_label";
+
 export interface ActivityFilters {
   user_id?: string;
   user_role?: string;
@@ -42,7 +44,7 @@ export async function getActivityLogs(
   const supabase = createClient();
   let query = supabase
     .from("activity_logs")
-    .select("*")
+    .select(ACTIVITY_COLUMNS)
     .eq("company_id", companyId)
     .order("created_at", { ascending: false })
     .limit(500);
@@ -66,16 +68,19 @@ export async function getEntityHistory(
   const supabase = createClient();
   const { data, error } = await supabase
     .from("activity_logs")
-    .select("*")
+    .select(ACTIVITY_COLUMNS)
     .eq("entity_type", entityType)
     .eq("entity_id", entityId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(100);
   if (error) throw error;
   return data ?? [];
 }
 
 export async function getOperatorStats(companyId: string): Promise<OperatorActivity[]> {
   const supabase = createClient();
+
+  const ytdStart = new Date(new Date().getFullYear(), 0, 1).toISOString();
 
   const [users, sales, purchases, logs] = await Promise.all([
     supabase
@@ -86,16 +91,22 @@ export async function getOperatorStats(companyId: string): Promise<OperatorActiv
     supabase
       .from("sales")
       .select("operator_id, grand_total")
-      .eq("company_id", companyId),
+      .eq("company_id", companyId)
+      .gte("created_at", ytdStart),
     supabase
       .from("purchases")
       .select("operator_id")
-      .eq("company_id", companyId),
+      .eq("company_id", companyId)
+      .gte("purchased_at", ytdStart),
+    // Fix #8: add limit as safety guard — unbounded 90-day window can grow to thousands of rows
+    // Long-term fix: use get_operator_activity_stats RPC (supabase/migrations/20260605_performance_rpcs.sql)
     supabase
       .from("activity_logs")
       .select("user_id, created_at")
       .eq("company_id", companyId)
-      .order("created_at", { ascending: false }),
+      .gte("created_at", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(2000),
   ]);
 
   const salesByUser: Record<string, { count: number; total: number }> = {};
