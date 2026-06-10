@@ -132,6 +132,28 @@ export interface Purchase {
   purchased_at: string;
 }
 
+export interface Customer {
+  id: string;
+  company_id: string;
+  name: string;
+  phone?: string;
+  current_balance: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreditTransactionType = "issue" | "payment";
+
+export interface CreditTransaction {
+  id: string;
+  customer_id: string;
+  company_id: string;
+  type: CreditTransactionType;
+  amount: number;
+  notes?: string;
+  created_at: string;
+}
+
 export interface Expense {
   id: string;
   company_id: string;
@@ -324,7 +346,7 @@ export interface CompanyGrowthPoint {
 
 // ─── Activity / Audit ─────────────────────────────────────────────────────────
 export type ActivityAction = "create" | "update" | "delete" | "adjustment";
-export type ActivityEntityType = "sale" | "purchase" | "product" | "expense" | "category";
+export type ActivityEntityType = "sale" | "purchase" | "product" | "expense" | "category" | "customer" | "credit_transaction";
 
 export interface Actor {
   id: string;

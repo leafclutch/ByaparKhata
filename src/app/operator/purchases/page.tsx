@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Plus, Trash2, Search, ChevronLeft, ChevronRight, RotateCcw, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Combobox } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { getPurchases, createPurchase, deletePurchase } from "@/lib/services/purchases";
+import { getPurchases, deletePurchase } from "@/lib/services/purchases";
 import { getProducts } from "@/lib/services/products";
 import { getCompanyTeam } from "@/lib/services/company";
 import { formatNPR, formatDate, PAYMENT_METHOD_LABELS, getDateRange, downloadCSV, cn } from "@/lib/utils";
@@ -27,25 +26,9 @@ const PERIOD_LABELS: Record<DatePeriod, string> = {
   "30days": "Last 30 Days", month: "This Month", all: "All Time", custom: "Custom",
 };
 
-type PurchaseForm = {
-  supplier_name: string;
-  product_id: string;
-  quantity: string;
-  unit_cost: string;
-  payment_method: PaymentMethod;
-  cash_amount: string;
-  online_amount: string;
-  invoice_number: string;
-  remarks: string;
-};
-
-const emptyForm: PurchaseForm = {
-  supplier_name: "", product_id: "", quantity: "", unit_cost: "",
-  payment_method: "cash", cash_amount: "", online_amount: "",
-  invoice_number: "", remarks: "",
-};
 
 function PurchaseHistoryContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
 
@@ -64,9 +47,6 @@ function PurchaseHistoryContent() {
   const [filterPayment, setFilterPayment] = useState("all");
   const [page, setPage] = useState(1);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState<PurchaseForm>(emptyForm);
-  const [saving, setSaving] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -118,66 +98,7 @@ function PurchaseHistoryContent() {
     setSearch(""); setFilterOperator("all"); setFilterPayment("all"); setPage(1);
   }
 
-  const selectedProduct = products.find((p) => p.id === form.product_id);
-  const productOptions = products.map((p) => ({ value: p.id, label: p.name, sublabel: p.sku }));
 
-  const totalCostCalc = Number(form.quantity) * Number(form.unit_cost) || 0;
-  const mixedCash = Number(form.cash_amount) || 0;
-  const mixedOnline = Number(form.online_amount) || 0;
-  const mixedBalance = form.payment_method === "mixed"
-    ? Math.round((mixedCash + mixedOnline - totalCostCalc) * 100) / 100
-    : 0;
-
-  async function handleSave() {
-    if (!form.supplier_name || !form.product_id || !form.quantity || !form.unit_cost) {
-      toast.error("Fill in all required fields."); return;
-    }
-    if (!user) return;
-
-    const qty = Number(form.quantity);
-    const cost = Number(form.unit_cost);
-    const total = qty * cost;
-
-    if (form.payment_method === "mixed") {
-      if (mixedCash < 0 || mixedOnline < 0) {
-        toast.error("Amounts cannot be negative."); return;
-      }
-      if (mixedBalance !== 0) {
-        toast.error(
-          `Cash + Online must equal ${formatNPR(total)}. Difference: ${formatNPR(Math.abs(mixedBalance))}`
-        );
-        return;
-      }
-    }
-
-    setSaving(true);
-    try {
-      const actor = { id: user.id, name: user.full_name, role: user.role };
-      const created = await createPurchase({
-        company_id: user.company_id,
-        operator_id: user.id,
-        supplier_name: form.supplier_name,
-        product_id: form.product_id,
-        product_name: selectedProduct?.name ?? "",
-        quantity: qty,
-        unit_cost: cost,
-        total_cost: total,
-        invoice_number: form.invoice_number || undefined,
-        payment_method: form.payment_method,
-        cash_amount: form.payment_method === "mixed" ? mixedCash : undefined,
-        online_amount: form.payment_method === "mixed" ? mixedOnline : undefined,
-        notes: form.remarks || undefined,
-      }, actor);
-      setAllPurchases((prev) => [created, ...prev]);
-      toast.success(`Purchase recorded — ${qty} × ${selectedProduct?.name}`);
-      setDialogOpen(false);
-      setForm(emptyForm);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to record purchase.");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete() {
     if (!purchaseToDelete) return;
@@ -227,7 +148,7 @@ function PurchaseHistoryContent() {
           <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 gap-1.5 text-xs">
             <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV
           </Button>
-          <Button onClick={() => setDialogOpen(true)} className="h-9 gap-1.5 text-sm bg-brand-600 hover:bg-brand-700">
+          <Button onClick={() => router.push("/operator/purchases/new")} className="h-9 gap-1.5 text-sm bg-brand-600 hover:bg-brand-700">
             <Plus className="w-4 h-4" /> New Purchase
           </Button>
         </div>
@@ -383,132 +304,7 @@ function PurchaseHistoryContent() {
         </div>
       )}
 
-      {/* New Purchase Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setForm(emptyForm); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>New Purchase</DialogTitle>
-            <DialogDescription>Record an incoming stock purchase from a supplier.</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
-            <div className="col-span-2 space-y-1.5">
-              <Label>Supplier Name *</Label>
-              <Input value={form.supplier_name} onChange={(e) => setForm((f) => ({ ...f, supplier_name: e.target.value }))} placeholder="e.g. Supplier Nepal" />
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Product *</Label>
-              <Combobox
-                options={productOptions}
-                value={form.product_id}
-                onValueChange={(v) => {
-                  const prod = products.find((p) => p.id === v);
-                  setForm((f) => ({ ...f, product_id: v, unit_cost: String(prod?.purchase_price ?? "") }));
-                }}
-                placeholder="Search or select product..."
-                searchPlaceholder="Type name or SKU..."
-                className="h-10"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Quantity *</Label>
-              <Input type="number" min={1} value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} placeholder="0" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Unit Cost (Rs.) *</Label>
-              <Input type="number" min={0} value={form.unit_cost} onChange={(e) => setForm((f) => ({ ...f, unit_cost: e.target.value }))} placeholder="0.00" />
-            </div>
 
-            {/* Payment method selector */}
-            <div className="col-span-2 space-y-2">
-              <Label>Payment Method</Label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(["cash", "online", "mixed"] as PaymentMethod[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, payment_method: m, cash_amount: "", online_amount: "" }))}
-                    className={cn(
-                      "py-2 rounded-xl text-xs font-bold border-2 transition-all",
-                      form.payment_method === m
-                        ? "border-brand-600 bg-brand-600 text-white shadow-sm"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-                    )}
-                  >
-                    {m === "mixed" ? "Mixed" : m.charAt(0).toUpperCase() + m.slice(1)}
-                  </button>
-                ))}
-              </div>
-
-              {form.payment_method === "mixed" && (
-                <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold text-slate-500">Cash (Rs.)</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.cash_amount}
-                        onChange={(e) => setForm((f) => ({ ...f, cash_amount: e.target.value }))}
-                        placeholder="0"
-                        className="h-9 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold text-slate-500">Online (Rs.)</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.online_amount}
-                        onChange={(e) => setForm((f) => ({ ...f, online_amount: e.target.value }))}
-                        placeholder="0"
-                        className="h-9 text-sm"
-                      />
-                    </div>
-                  </div>
-                  {(form.cash_amount || form.online_amount) && (
-                    <p className={cn("text-xs font-semibold", mixedBalance === 0 ? "text-emerald-600" : "text-rose-600")}>
-                      {mixedBalance === 0
-                        ? "✓ Total matches invoice"
-                        : mixedBalance > 0
-                        ? `Rs. ${Math.abs(mixedBalance)} excess`
-                        : `Rs. ${Math.abs(mixedBalance)} remaining`}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Supplier Invoice #</Label>
-              <Input value={form.invoice_number} onChange={(e) => setForm((f) => ({ ...f, invoice_number: e.target.value }))} placeholder="SUP-1234" />
-            </div>
-
-            {form.quantity && form.unit_cost && (
-              <div className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-xl self-end">
-                <span className="text-sm text-slate-600">Total Cost</span>
-                <span className="text-base font-bold text-rose-700">{formatNPR(totalCostCalc)}</span>
-              </div>
-            )}
-
-            <div className="col-span-2 space-y-1.5">
-              <Label>Remarks (Optional)</Label>
-              <textarea
-                value={form.remarks}
-                onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
-                placeholder="e.g. Supplier provided extra stock, pending invoice…"
-                rows={2}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-brand-400 focus:outline-none resize-none"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setDialogOpen(false); setForm(emptyForm); }}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700">
-              {saving ? "Saving…" : "Record Purchase"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete confirm */}
       <Dialog open={!!purchaseToDelete} onOpenChange={() => setPurchaseToDelete(null)}>

@@ -168,3 +168,108 @@ export async function deletePurchase(purchaseId: string, actor?: Actor): Promise
     });
   }
 }
+
+export interface BulkPurchaseInput {
+  company_id: string;
+  operator_id: string;
+  supplier_name: string;
+  payment_method: string;
+  cash_amount?: number;
+  online_amount?: number;
+  notes?: string;
+  invoice_number?: string;
+}
+
+export interface PurchaseCartItem {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_cost: number;
+  total_cost: number;
+}
+
+export async function createPurchasesBulk(
+  input: BulkPurchaseInput,
+  items: PurchaseCartItem[],
+  actor?: Actor
+): Promise<Purchase[]> {
+  const supabase = createClient();
+
+  const productIds = items.map((i) => i.product_id);
+  const { data: currentProducts, error: pErr } = await supabase
+    .from("products")
+    .select("id, quantity")
+    .in("id", productIds);
+  if (pErr) throw pErr;
+
+  const productQtyMap = Object.fromEntries(
+    (currentProducts ?? []).map((p) => [p.id, p.quantity])
+  );
+
+  const purchasedAt = new Date().toISOString();
+
+  const purchasesToInsert = items.map((item) => ({
+    company_id: input.company_id,
+    operator_id: input.operator_id,
+    supplier_name: input.supplier_name,
+    product_id: item.product_id,
+    product_name: item.product_name,
+    quantity: item.quantity,
+    unit_cost: item.unit_cost,
+    total_cost: item.total_cost,
+    invoice_number: input.invoice_number || null,
+    payment_method: input.payment_method,
+    cash_amount: input.cash_amount ?? null,
+    online_amount: input.online_amount ?? null,
+    notes: input.notes || null,
+    purchased_at: purchasedAt,
+  }));
+
+  const { data: createdPurchases, error: insertErr } = await supabase
+    .from("purchases")
+    .insert(purchasesToInsert)
+    .select();
+  if (insertErr) throw insertErr;
+
+  await Promise.all(
+    items.map(async (item) => {
+      const currentQty = productQtyMap[item.product_id] ?? 0;
+      const newQty = currentQty + item.quantity;
+
+      await supabase
+        .from("products")
+        .update({ quantity: newQty })
+        .eq("id", item.product_id);
+
+      const createdPurchase = (createdPurchases ?? []).find(
+        (cp) => cp.product_id === item.product_id
+      );
+
+      await supabase.from("inventory_transactions").insert({
+        company_id: input.company_id,
+        product_id: item.product_id,
+        quantity_change: item.quantity,
+        previous_stock: currentQty,
+        new_stock: newQty,
+        reference_type: "purchase",
+        reference_id: createdPurchase?.id,
+        user_id: input.operator_id,
+      });
+    })
+  );
+
+  if (actor) {
+    const itemsLabel = items.map((i) => `${i.product_name} ×${i.quantity}`).join(", ");
+    await logActivity({
+      company_id: input.company_id,
+      actor,
+      action: "create",
+      entity_type: "purchase",
+      entity_id: createdPurchases?.[0]?.id ?? "bulk",
+      entity_label: `Bulk purchase (${itemsLabel}) from ${input.supplier_name}`,
+    });
+  }
+
+  return createdPurchases ?? [];
+}
+
