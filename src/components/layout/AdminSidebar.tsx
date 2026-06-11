@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BarChart3, TrendingUp, DollarSign,
   PackageSearch, Bell, Boxes, Users, Building2, User,
   LogOut, X, ChevronDown, Activity, ShoppingCart,
-  PieChart, Tag
+  PieChart, Tag, HandCoins
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { useUIStore } from "@/store/uiStore";
@@ -56,6 +56,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/admin/settings", icon: Building2, label: "Company Settings" },
       { href: "/admin/notifications", icon: Bell, label: "Notifications", badge: true },
       { href: "/admin/activity", icon: Activity, label: "Activity Log" },
+      { href: "/admin/credit", icon: HandCoins, label: "Credit Khata" },
     ],
   },
 ];

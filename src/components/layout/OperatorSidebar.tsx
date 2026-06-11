@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutDashboard, Package, Tag, Boxes, ShoppingCart,
   PackageSearch, DollarSign, FileText, History, X, LogOut, ChevronRight,
-  List, PlusCircle, ChevronDown, User, Receipt
+  List, PlusCircle, ChevronDown, User, Receipt, HandCoins
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { useUIStore } from "@/store/uiStore";
@@ -64,6 +64,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
         ],
       },
       { href: "/operator/expenses", icon: DollarSign, label: "Expenses" },
+      { href: "/operator/credit", icon: HandCoins, label: "Credit Khata" },
       { href: "/operator/transactions", icon: History, label: "My History" },
     ],
   },

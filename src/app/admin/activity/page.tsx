@@ -33,6 +33,8 @@ const ENTITY_LABELS: Record<ActivityEntityType, string> = {
   product: "Product",
   expense: "Expense",
   category: "Category",
+  customer: "Customer",
+  credit_transaction: "Credit Transaction",
 };
 
 const ROLE_COLORS: Record<string, string> = {
